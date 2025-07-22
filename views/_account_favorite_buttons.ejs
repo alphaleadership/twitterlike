@@ -1,0 +1,11 @@
+<div class="d-inline-flex align-items-center">
+  <% if (tweet.isFavoriteAccount) { %>
+    <form action="/unfavorite_account/<%= tweet.compte %>" method="POST" class="m-0 me-2">
+      <button type="submit" class="btn btn-sm btn-warning">Unfavorite Account</button>
+    </form>
+  <% } else { %>
+    <form action="/favorite_account/<%= tweet.compte %>" method="POST" class="m-0 me-2">
+      <button type="submit" class="btn btn-sm btn-success">Favorite Account</button>
+    </form>
+  <% } %>
+</div>

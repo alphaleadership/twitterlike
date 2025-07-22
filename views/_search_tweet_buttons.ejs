@@ -1,0 +1,12 @@
+<div class="d-inline-flex align-items-center">
+  <% if (tweetData.isFavoriteAccount) { %>
+    <form action="/unfavorite_account/<%= tweetData.compte %>" method="POST" class="m-0 me-2">
+      <button type="submit" class="btn btn-sm btn-warning">Unfavorite Account</button>
+    </form>
+  <% } else { %>
+    <form action="/favorite_account/<%= tweetData.compte %>" method="POST" class="m-0 me-2">
+      <button type="submit" class="btn btn-sm btn-success">Favorite Account</button>
+    </form>
+  <% } %>
+  <%- include('_tweet_buttons', { tweetData: tweetData }) %>
+</div>

@@ -1,0 +1,8 @@
+<div class="d-inline-flex align-items-center">
+  <%- include('_account_favorite_buttons', { tweet: tweetData }) %>
+  <a href="/tweet/<%= tweetData.id %>" class="btn btn-sm btn-outline-primary me-2">View</a>
+  <form action="/hide/<%= tweetData.compte %>" method="POST" class="m-0 me-2">
+    <button type="submit" class="btn btn-sm btn-outline-danger">Hide</button>
+  </form>
+  <%- include('_tweet_favorite_buttons', { tweet: tweetData }) %>
+</div>
