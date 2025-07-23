@@ -1,8 +1,8 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
-
+require("dotenv").config();
 async function migrateTweets() {
-  const uri = 'mongodb+srv://thomasiniguez:YdHoz8PjNexzRyJW@cluster0.fzqc47r.mongodb.net/';
+  const uri = process.env.MONGO_URI;
   const client = new MongoClient(uri);
 
   try {
