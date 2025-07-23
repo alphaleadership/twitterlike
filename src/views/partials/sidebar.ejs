@@ -1,0 +1,22 @@
+<div class="sidebar">
+    <h2>Accounts</h2>
+    <ul class="account-list">
+        <% allAccounts.forEach(account => { %>
+            <li>
+                <a href="/profile/<%= account %>"><%= account %></a>
+                <% if (favoriteAccounts.includes(account)) { %>
+                    <form action="/unfavorite_account/<%= account %>" method="post" style="display: inline;">
+                        <button type="submit" class="favorite-btn unfavorite">★</button>
+                    </form>
+                <% } else { %>
+                    <form action="/favorite_account/<%= account %>" method="post" style="display: inline;">
+                        <button type="submit" class="favorite-btn">☆</button>
+                    </form>
+                <% } %>
+                <form action="/hide/<%= account %>" method="post" style="display: inline;">
+                    <button type="submit" class="hide-btn">Hide</button>
+                </form>
+            </li>
+        <% }); %>
+    </ul>
+</div>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= user.username %>'s Media</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <div class="main-content">
+            <h1>Media from <%= user.username %></h1>
+            <div class="media-grid">
+                <% media.forEach(item => { %>
+                    <div class="media-item">
+                        <% if (item.type === 'photo') { %>
+                            <img src="<%= item.media_object.media_url_https %>" alt="Tweet Media">
+                        <% } else if (item.type === 'video') { %>
+                            <video controls src="<%= item.lien %>"></video>
+                        <% } %>
+                    </div>
+                <% }); %>
+            </div>
+            <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages }) %>
+        </div>
+    </div>
+</body>
+</html>
