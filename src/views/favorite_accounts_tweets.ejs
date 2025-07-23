@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favorite Accounts Tweets</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <h1>Tweets from Your Favorite Accounts</h1>
+    <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+</body>
+</html>
