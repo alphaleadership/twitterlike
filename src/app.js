@@ -15,6 +15,12 @@ app.set('views', path.join(__dirname, 'views'));
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const fs = require('fs');
+const morgan = require('morgan');
+// Setup the logger
+const accessLogStream = fs.createWriteStream(path.join(__dirname, '../access.log'), { flags: 'a' });
+app.use(morgan('combined', { stream: accessLogStream }));
+app.use(morgan('dev')); // Log to console as well
 
 // Serve static files from the public directory for EJS templates
 app.use('/public', express.static(path.join(__dirname, 'public')));
@@ -28,9 +34,9 @@ app.use(express.static(path.join(__dirname, '../dist')));
 // API Routes
 app.use('/api', apiRoutes);
 
-// Handle SPA (Single Page Application) - serve index.html for any other routes not handled by webRoutes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+// Handle 404 - Keep this as the last route
+app.use((req, res, next) => {
+  res.status(404).render('404');
 });
 
 // Error handling middleware

@@ -8,17 +8,20 @@
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
         <div class="main-content">
             <h1>Media from <%= user.username %></h1>
+            <p><a href="/profile/<%= user.username %>">Return to Profile</a></p>
             <div class="media-grid">
                 <% media.forEach(item => { %>
                     <div class="media-item">
-                        <% if (item.type === 'photo') { %>
-                            <img src="<%= item.media_object.media_url_https %>" alt="Tweet Media">
-                        <% } else if (item.type === 'video') { %>
-                            <video controls src="<%= item.lien %>"></video>
-                        <% } %>
+                        <a href="/tweet/<%= item.tweetId %>">
+                            <% if (item.type === 'photo') { %>
+                                <img src="<%= item.lien %>" alt="Tweet Media">
+                            <% } else if (item.type === 'video') { %>
+                                <video controls src="<%= item.lien %>"></video>
+                            <% } %>
+                        </a>
                     </div>
                 <% }); %>
             </div>

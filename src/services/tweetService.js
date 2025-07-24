@@ -161,6 +161,7 @@ class TweetService {
       });
       
       return Object.entries(accountCounts)
+        .filter(([account, count]) => count > 10) // Filter accounts with more than 10 tweets
         .map(([account, count]) => ({ account, count }))
         .sort((a, b) => b.count - a.count)
         .map(item => item.account);
@@ -422,6 +423,31 @@ class TweetService {
       return updateFavorites(tweetId, 'remove');
     } catch (error) {
       console.error(`Error removing favorite for tweet ${tweetId}:`, error);
+      throw error;
+    }
+  }
+
+  async addMultipleFavorites(tweetIds) {
+    try {
+      for (const tweetId of tweetIds) {
+        await updateFavorites(tweetId, 'add');
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error adding multiple favorites:`, error);
+      throw error;
+    }
+  }
+
+  async getTweetsWithMediaByUsername(username, page = 1, pageSize = 10) {
+    try {
+      const { tweets } = await this.getTweetsByUsername(username, page, pageSize); // Get all tweets for user
+      const mediaTweets = tweets.filter(tweet => 
+        (tweet.allMedia && tweet.allMedia.length > 0)
+      );
+      return { tweets: mediaTweets };
+    } catch (error) {
+      console.error(`Error getting tweets with media for user ${username}:`, error);
       throw error;
     }
   }

@@ -1,11 +1,14 @@
 <div class="tweet-card">
-    <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> - <%= new Date(tweet.date).toLocaleDateString() %></p>
+    <div class="tweet-header">
+        <img src="/public/images/profiles/<%= tweet.compte %>.png" alt="Profile Picture for <%= tweet.compte %>" class="profile-pic-tweet" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
+        <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> - <%= new Date(tweet.date).toLocaleDateString() %></p>
+    </div>
     <p><%- formatTweetText(tweet.texte) %></p>
     <% if (tweet.allMedia && tweet.allMedia.length > 0) { %>
         <div class="tweet-media">
             <% tweet.allMedia.forEach(media => { %>
                 <% if (media.type === 'photo') { %>
-                    <img src="<%= media.media_object.media_url_https %>" alt="Tweet Media">
+                    <img src="<%= media.lien %>" alt="Tweet Media">
                 <% } else if (media.type === 'video') { %>
                     <video controls src="<%= media.lien %>"></video>
                 <% } %>
@@ -13,7 +16,7 @@
         </div>
     <% } %>
     <div class="tweet-actions">
-        <form action="/favorite/<%= tweet.id %>" method="post" style="display: inline;">
+        <form action="<%= tweet.isFavorite ? '/unfavorite/' : '/favorite/' %><%= tweet.id %>" method="post" style="display: inline;">
             <button type="submit"><%= tweet.isFavorite ? 'Unfavorite' : 'Favorite' %></button>
         </form>
         <form action="/hide/<%= tweet.compte %>" method="post" style="display: inline;">

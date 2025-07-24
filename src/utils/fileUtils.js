@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+
 
 const readJsonFile = (filePath) => {
   try {
@@ -78,14 +80,44 @@ const updateFavorites = (tweetId, action = 'add') => {
   
   return writeJsonFile(favoritesPath, favorites);
 };
-
+const accountsFilePath = path.join(__dirname, '../../../accounts.txt');
+console.log(accountsFilePath)
 const appendAccountToFile = (username) => {
-  const accountsFilePath = path.join(__dirname, '../../accounts.txt');
+
+
   try {
     fs.appendFileSync(accountsFilePath, username + '\n');
     console.log(`Appended ${username} to accounts.txt`);
   } catch (error) {
     console.error(`Error appending account to file ${accountsFilePath}:`, error);
+  }
+};
+
+
+
+const downloadProfilePicture = async (username) => {
+  console.log(fetch)
+  const imageUrl = `https://unavatar.io/twitter/${username}`;
+  const imagePath = path.join(__dirname, '../public/images/profiles', `${username}.png`);
+
+  // Check if the file already exists
+  if (fs.existsSync(imagePath)) {
+    console.log(`Profile picture for ${username} already exists. Skipping download.`);
+    return true;
+  }
+
+  try {
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    if (response.status !== 200) {
+      console.warn(`Could not download profile picture for ${username}:`);
+      return false;
+    }
+    fs.writeFileSync(imagePath, response.data);
+    console.log(`Downloaded profile picture for ${username}`);
+    return true;
+  } catch (error) {
+    console.error(`Error downloading profile picture for ${username}:`);
+    return false;
   }
 };
 
@@ -98,5 +130,6 @@ module.exports = {
   updateFavorites,
   readJsonFile,
   writeJsonFile,
-  appendAccountToFile
+  appendAccountToFile,
+  downloadProfilePicture
 };

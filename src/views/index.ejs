@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
         <div class="main-content">
             <h1>Welcome to the Twitter-like Feed</h1>
             <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>

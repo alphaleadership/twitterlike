@@ -12,7 +12,7 @@
         <% media.forEach(item => { %>
             <div class="media-item">
                 <% if (item.type === 'photo') { %>
-                    <img src="<%= item.media_object.media_url_https %>" alt="Tweet Media">
+                    <img src="<%= item.lien %>" alt="Tweet Media">
                 <% } else if (item.type === 'video') { %>
                     <video controls src="<%= item.lien %>"></video>
                 <% } %>

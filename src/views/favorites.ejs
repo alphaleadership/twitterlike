@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
-    <h1>Your Favorite Tweets</h1>
-    <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+    <div class="container">
+        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <div class="main-content">
+            <h1>Your Favorite Tweets</h1>
+            <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+        </div>
+    </div>
 </body>
 </html>

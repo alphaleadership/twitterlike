@@ -13,6 +13,8 @@ const webController = {
     try {
       const page = parseInt(req.query.page) || 1;
       const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.getPaginatedTweets(page);
+      console.log('allAccounts', allAccounts);
+      
       res.render('index', {
         tweets,
         currentPage,
@@ -72,6 +74,7 @@ const webController = {
       const { user, media, currentPage, totalPages } = await tweetService.getProfileMedia(username, page);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      console.log('Media data for profile_media.ejs:', media);
       if (user) {
         res.render('profile_media', {
           user,
@@ -98,6 +101,13 @@ const webController = {
       const { user, videos, currentPage, totalPages } = await tweetService.getProfileVideos(username, page);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
+
+      // Download profile pictures for all accounts
+      for (const account of allAccounts) {
+        await fileUtils.downloadProfilePicture(account);
+      }
+
+      console.log('Video data for profile_videos.ejs:', videos);
       if (user) {
         res.render('profile_videos', {
           user,
@@ -124,6 +134,19 @@ const webController = {
       const { user, tweets, media, topRetweetedAccounts, topMentionedAccounts, currentPage, totalPages } = await tweetService.getProfileData(username, page);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
+
+      // Download profile pictures for all accounts
+      for (const account of allAccounts) {
+        await fileUtils.downloadProfilePicture(account);
+      }
+
+      // Download profile pictures for mentioned accounts
+      if (topMentionedAccounts && topMentionedAccounts.length > 0) {
+        for (const item of topMentionedAccounts) {
+          await fileUtils.downloadProfilePicture(item.account);
+        }
+      }
+
       if (user) {
         res.render('profile', {
           user,
@@ -151,8 +174,10 @@ const webController = {
     try {
       const tweetId = req.params.id;
       const tweet = await tweetService.getTweetById(tweetId);
+      const allAccounts = await tweetService.getUniqueAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts();
       if (tweet) {
-        res.render('tweet_detail', { tweet, formatTweetText });
+        res.render('tweet_detail', { tweet, formatTweetText, allAccounts, favoriteAccounts });
       } else {
         res.status(404).send('Tweet not found');
       }
@@ -166,6 +191,7 @@ const webController = {
     try {
       const page = parseInt(req.query.page) || 1;
       const { media, currentPage, totalPages } = await tweetService.getAllMedia(page);
+      
       res.render('all_media', {
         media,
         currentPage,
@@ -192,7 +218,7 @@ const webController = {
     try {
       const tweetId = req.params.id;
       await tweetService.addFavorite(tweetId);
-      res.redirect('back');
+      res.redirect(`/tweet/${tweetId}`);
     } catch (error) {
       console.error('Error adding favorite:', error);
       res.status(500).send('Error adding favorite');
@@ -203,7 +229,7 @@ const webController = {
     try {
       const tweetId = req.params.id;
       await tweetService.removeFavorite(tweetId);
-      res.redirect('back');
+      res.redirect(`/tweet/${tweetId}`);
     } catch (error) {
       console.error('Error removing favorite:', error);
       res.status(500).send('Error removing favorite');
@@ -229,6 +255,32 @@ const webController = {
     } catch (error) {
       console.error('Error removing favorite account:', error);
       res.status(500).send('Error removing favorite account');
+    }
+  },
+
+  async addAllTweetsToFavorites(req, res) {
+    try {
+      const username = req.params.username;
+      const { tweets } = await tweetService.getTweetsByUsername(username, 1, 99999); // Get all tweets
+      const tweetIds = tweets.map(tweet => tweet.id);
+      await tweetService.addMultipleFavorites(tweetIds);
+      res.redirect(`/profile/${username}`);
+    } catch (error) {
+      console.error('Error adding all tweets to favorites:', error);
+      res.status(500).send('Error adding all tweets to favorites');
+    }
+  },
+
+  async addAllMediaTweetsToFavorites(req, res) {
+    try {
+      const username = req.params.username;
+      const { tweets } = await tweetService.getTweetsWithMediaByUsername(username, 1, 99999); // Get all media tweets
+      const tweetIds = tweets.map(tweet => tweet.id);
+      await tweetService.addMultipleFavorites(tweetIds);
+      res.redirect(`/profile/${username}`);
+    } catch (error) {
+      console.error('Error adding all media tweets to favorites:', error);
+      res.status(500).send('Error adding all media tweets to favorites');
     }
   }
 };

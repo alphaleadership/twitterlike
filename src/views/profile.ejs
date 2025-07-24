@@ -4,13 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= user.username %>'s Profile</title>
+    <link rel="icon" href="/public/images/profiles/<%= user.username %>.png" type="image/png" onerror="this.onerror=null;this.href='/public/images/default_profile.png';">
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: topMentionedAccounts, favoriteAccounts: favoriteAccounts }) %>
         <div class="main-content">
             <h1><%= user.username %>'s Profile</h1>
+            <p><a href="/">Return to Homepage</a></p>
+            <form action="/add_all_tweets_to_favorites/<%= user.username %>" method="post" style="display: inline;">
+                <button type="submit">Add All Tweets to Favorites</button>
+            </form>
+            <form action="/add_all_media_tweets_to_favorites/<%= user.username %>" method="post" style="display: inline;">
+                <button type="submit">Add All Media Tweets to Favorites</button>
+            </form>
             <p>Total Tweets: <%= tweets.length %></p>
             <div class="profile-nav">
                 <a href="/profile/<%= user.username %>">Tweets</a>
