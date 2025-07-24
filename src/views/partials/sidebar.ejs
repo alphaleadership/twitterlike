@@ -1,19 +1,32 @@
 <div class="sidebar">
-    <h2>Accounts</h2>
+    <h2>Mentioned Accounts</h2>
+    <ul class="sidebar-menu">
+        <li><a href="/favorite_accounts_tweets">Favorite Accounts Tweets</a></li>
+        <li><a href="/favorites">Favorite Tweets</a></li>
+    </ul>
     <ul class="account-list">
-        <% allAccounts.forEach(account => { %>
+        <% sidebarAccounts.map(item=>{
+            if(typeof item === 'object'){
+                return item;
+            }else{
+                return {account: item, count: 1};
+            }
+        }).forEach(item => { %>
             <li>
-                <a href="/profile/<%= account %>"><%= account %></a>
-                <% if (favoriteAccounts.includes(account)) { %>
-                    <form action="/unfavorite_account/<%= account %>" method="post" style="display: inline;">
+                <div class="account-info">
+                    <img src="/public/images/profiles/<%= item.account %>.png" alt="NF" class="profile-pic" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
+                    <a href="/profile/<%= item.account %>"><%= item.account %> (<%= item.count %>)</a>
+                </div>
+                <% if (favoriteAccounts.includes(item.account)) { %>
+                    <form action="/unfavorite_account/<%= item.account %>" method="post" style="display: inline;">
                         <button type="submit" class="favorite-btn unfavorite">★</button>
                     </form>
                 <% } else { %>
-                    <form action="/favorite_account/<%= account %>" method="post" style="display: inline;">
+                    <form action="/favorite_account/<%= item.account %>" method="post" style="display: inline;">
                         <button type="submit" class="favorite-btn">☆</button>
                     </form>
                 <% } %>
-                <form action="/hide/<%= account %>" method="post" style="display: inline;">
+                <form action="/hide/<%= item.account %>" method="post" style="display: inline;">
                     <button type="submit" class="hide-btn">Hide</button>
                 </form>
             </li>

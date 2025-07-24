@@ -16,16 +16,40 @@ body {
 }
 
 .sidebar {
-    width: 250px;
+    width: 400px;
     padding: 20px;
     border-right: 1px solid #e1e8ed;
     background-color: #f9f9f9;
+    max-height: calc(100vh - 40px); /* Adjust based on your layout */
+    overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .sidebar h2 {
     color: #1da1f2;
     margin-top: 0;
     margin-bottom: 15px;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.sidebar-menu li a {
+    display: block;
+    padding: 10px 15px;
+    background-color: #1da1f2;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.sidebar-menu li a:hover {
+    background-color: #0c85d0;
 }
 
 .account-list {
@@ -53,6 +77,34 @@ body {
 
 .account-list li a:hover {
     color: #1da1f2;
+}
+
+.account-info {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.profile-pic {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+.tweet-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.profile-pic-tweet {
+    width: 40px; /* Slightly larger than sidebar profile pic */
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
 }
 
 .favorite-btn,
@@ -212,8 +264,8 @@ h1 {
 .media-item img,
 .media-item video {
     width: 100%;
-    height: 150px; /* Reduced height for media grid */
-    object-fit: cover;
+    height: 200px; /* Increased height for media grid */
+    object-fit: contain;
     display: block;
 }
 
@@ -235,5 +287,5 @@ h1 {
 }
 
 .profile-nav a:hover {
-    background-color: #e1e8ed;
+    background-color: #4a5568; /* Darker hover background */
 }

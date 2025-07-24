@@ -1,12 +1,12 @@
 <% tweets.forEach(tweet => { %>
     <div class="tweet-card">
-        <p><strong><%= tweet.compte %></strong> @<%= tweet.compte %> - <%= new Date(tweet.date).toLocaleDateString() %></p>
+        <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> </p>
         <p><%- formatTweetText(tweet.texte) %></p>
         <% if (tweet.allMedia && tweet.allMedia.length > 0) { %>
             <div class="tweet-media">
                 <% tweet.allMedia.forEach(media => { %>
                     <% if (media.type === 'photo') { %>
-                        <img src="<%= media.media_object.media_url_https %>" alt="Tweet Media">
+                        <img src="<%= media.lien %>" alt="Tweet Media">
                     <% } else if (media.type === 'video') { %>
                         <video controls src="<%= media.lien %>"></video>
                     <% } %>

@@ -17,5 +17,7 @@ router.post('/favorite/:id', webController.addFavorite);
 router.post('/unfavorite/:id', webController.removeFavorite);
 router.post('/favorite_account/:username', webController.addFavoriteAccount);
 router.post('/unfavorite_account/:username', webController.removeFavoriteAccount);
+router.post('/add_all_tweets_to_favorites/:username', webController.addAllTweetsToFavorites);
+router.post('/add_all_media_tweets_to_favorites/:username', webController.addAllMediaTweetsToFavorites);
 
 module.exports = router;

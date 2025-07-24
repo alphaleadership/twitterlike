@@ -8,9 +8,10 @@
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { allAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
         <div class="main-content">
             <h1>Videos from <%= user.username %></h1>
+            <p><a href="/profile/<%= user.username %>">Return to Profile</a></p>
             <div class="media-grid">
                 <% videos.forEach(item => { %>
                     <div class="media-item">

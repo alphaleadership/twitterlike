@@ -4,14 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tweet by <%= tweet.compte %></title>
+    <link rel="icon" href="/public/images/profiles/<%= tweet.compte %>.png" type="image/png" onerror="this.onerror=null;this.href='/public/images/default_profile.png';">
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
-    <h1>Tweet by <%= tweet.compte %></h1>
-    <%- include('partials/tweetCard', { tweet: tweet, formatTweetText: formatTweetText }) %>
-    <div class="tweet-actions">
-        <a href="https://twitter.com/<%= tweet.compte %>/status/<%= tweet.id %>" target="_blank" class="view-on-twitter-btn">View on Twitter</a>
-        <a href="/profile/<%= tweet.compte %>" class="return-to-profile-btn">Return to Profile</a>
+    <div class="container">
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <div class="main-content">
+            <h1>Tweet by <%= tweet.compte %></h1>
+            <%- include('partials/tweetCard', { tweet: tweet, formatTweetText: formatTweetText }) %>
+            <div class="tweet-actions">
+                <a href="https://twitter.com/<%= tweet.compte %>/status/<%= tweet.id %>" target="_blank" class="view-on-twitter-btn">View on Twitter</a>
+                <a href="/profile/<%= tweet.compte %>" class="return-to-profile-btn">Return to Profile</a>
+            </div>
+        </div>
     </div>
 </body>
 </html>
