@@ -22,7 +22,18 @@ const videofilter = (tweet) => {
   return good;
 };
 
-const enrichTweet = (tweet, favorites, favoriteAccounts) => {
+const enrichTweet = (tweet, favorites, favoriteAccounts, formatTextFunction, tweetService) => {
+  // Check if it's a retweet
+  if (tweet.retweeted_status) {
+    const originalTweet = tweet.retweeted_status;
+    originalTweet.isRetweet = false; // Mark original as not a retweet
+    return {
+      ...enrichTweet(originalTweet, favorites, favoriteAccounts, formatTextFunction, tweetService), // Recursively enrich original tweet
+      isRetweet: true,
+      retweetedBy: tweet.compte // Add who retweeted it
+    };
+  }
+
   let allMedia = [];
   if (tweet.media) {
     allMedia = allMedia.concat(tweet.media.filter(m => m.type === 'photo'));
@@ -33,6 +44,20 @@ const enrichTweet = (tweet, favorites, favoriteAccounts) => {
   tweet.allMedia = allMedia;
   tweet.isFavorite = favorites.includes(tweet.id);
   tweet.isFavoriteAccount = favoriteAccounts.includes(tweet.compte);
+
+  // Format quote if it exists
+  if (tweet.quote) {
+    const twitterUrlMatch = tweet.quote.match(/https?:\/\/(?:www\.)?twitter\.com\/\w+\/status\/(\d+)/);
+    if (twitterUrlMatch && tweetService) {
+      const quotedTweetId = twitterUrlMatch[1];
+      // We need to fetch the quoted tweet here. This will be done in tweetService.
+      // For now, just store the ID and a flag.
+      tweet.quotedTweetId = quotedTweetId;
+    } else if (formatTextFunction) {
+      tweet.formattedQuote = formatTextFunction(tweet.quote);
+    }
+  }
+
   return tweet;
 };
 

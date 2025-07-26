@@ -32,6 +32,11 @@ const getHiddenAccounts = () => {
   return readJsonFile(hiddenAccountsPath);
 };
 
+const getHiddenTweets = () => {
+  const hiddenTweetsPath = path.join(__dirname, '../../hidden_tweets.json');
+  return readJsonFile(hiddenTweetsPath);
+};
+
 const getFavorites = () => {
   const favoritesPath = path.join(__dirname, '../../favorites.json');
   return readJsonFile(favoritesPath);
@@ -80,6 +85,19 @@ const updateFavorites = (tweetId, action = 'add') => {
   
   return writeJsonFile(favoritesPath, favorites);
 };
+
+const updateHiddenTweets = (tweetId, action = 'add') => {
+  const hiddenTweetsPath = path.join(__dirname, '../../hidden_tweets.json');
+  let hiddenTweets = getHiddenTweets();
+  
+  if (action === 'add' && !hiddenTweets.includes(tweetId)) {
+    hiddenTweets.push(tweetId);
+  } else if (action === 'remove') {
+    hiddenTweets = hiddenTweets.filter(id => id !== tweetId);
+  }
+  
+  return writeJsonFile(hiddenTweetsPath, hiddenTweets);
+};
 const accountsFilePath = path.join(__dirname, '../../../accounts.txt');
 console.log(accountsFilePath)
 const appendAccountToFile = (username) => {
@@ -97,7 +115,7 @@ const appendAccountToFile = (username) => {
 
 const downloadProfilePicture = async (username) => {
   console.log(fetch)
-  const imageUrl = `https://unavatar.io/twitter/${username}`;
+  const imageUrl = `http://localhost:3031/twitter/${username}`;
   const imagePath = path.join(__dirname, '../public/images/profiles', `${username}.png`);
 
   // Check if the file already exists
@@ -123,11 +141,13 @@ const downloadProfilePicture = async (username) => {
 
 module.exports = {
   getHiddenAccounts,
+  getHiddenTweets,
   getFavorites,
   getFavoriteAccounts,
   updateFavoriteAccounts,
   updateHiddenAccounts,
   updateFavorites,
+  updateHiddenTweets,
   readJsonFile,
   writeJsonFile,
   appendAccountToFile,

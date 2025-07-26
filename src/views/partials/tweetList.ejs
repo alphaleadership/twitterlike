@@ -23,7 +23,7 @@
             <form action="<%= tweet.isFavoriteAccount ? '/unfavorite_account/' : '/favorite_account/' %><%= tweet.compte %>" method="post" style="display: inline;">
                 <button type="submit"><%= tweet.isFavoriteAccount ? 'Unfavorite Account' : 'Favorite Account' %></button>
             </form>
-            <a href="/tweet/<%= tweet.id %>">View Tweet</a>
+            <a href="/tweet/<%= tweet.id %>" target="_blank" rel="noopener noreferrer">View Tweet</a>
         </div>
     </div>
 <% }); %>

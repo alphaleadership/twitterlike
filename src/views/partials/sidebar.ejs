@@ -4,6 +4,10 @@
         <li><a href="/favorite_accounts_tweets">Favorite Accounts Tweets</a></li>
         <li><a href="/favorites">Favorite Tweets</a></li>
     </ul>
+    <form action="/" method="get">
+        <input type="text" name="search" placeholder="Search for accounts.." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4a5568; background-color: #2d3748; color: #e2e8f0;">
+        <button type="submit" style="display: none;"></button>
+    </form>
     <ul class="account-list">
         <% sidebarAccounts.map(item=>{
             if(typeof item === 'object'){

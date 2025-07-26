@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { sidebarAccounts: topMentionedAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: topMentionedAccounts, favoriteAccounts: favoriteAccounts, searchQuery: '' }) %>
         <div class="main-content">
             <h1><%= user.username %>'s Profile</h1>
             <p><a href="/">Return to Homepage</a></p>
@@ -26,7 +26,18 @@
                 <a href="/profile/<%= user.username %>/videos">Videos</a>
             </div>
             <h2>Tweets</h2>
-            <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+            <!-- Search Form -->
+            <div class="mb-4">
+                <form action="/search" method="GET">
+                    <div class="input-group">
+                        <input type="text" name="query" class="form-control" placeholder="Search for tweets..." aria-label="Search for tweets" value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                    </div>
+                </form>
+            </div>
+            <div id="tweetListContainer">
+                <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+            </div>
             <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages }) %>
         </div>
     </div>

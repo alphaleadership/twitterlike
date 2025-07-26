@@ -1,5 +1,5 @@
 const { getDb } = require('../config/db');
-const { getHiddenAccounts, getFavorites, getFavoriteAccounts, updateFavorites, appendAccountToFile } = require('../utils/fileUtils');
+const { getHiddenAccounts, getFavorites, getFavoriteAccounts, updateFavorites, appendAccountToFile, getHiddenTweets, updateHiddenTweets } = require('../utils/fileUtils');
 const { enrichTweet, videofilter } = require('../utils/mediaUtils');
 
 class TweetService {
@@ -22,7 +22,8 @@ class TweetService {
       
       if (filterHidden) {
         const hiddenAccounts = getHiddenAccounts();
-        tweets = tweets.filter(tweet => !hiddenAccounts.includes(tweet.compte));
+        const hiddenTweets = getHiddenTweets();
+        tweets = tweets.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
       }
       
       const favorites = getFavorites();
@@ -37,14 +38,14 @@ class TweetService {
     }
   }
 
-  async getTweetById(tweetId) {
+  async getTweetById(tweetId, formatTweetText) {
     try {
       const collection = await this.getCollection();
       let tweet = await collection.findOne({ id: tweetId });
       if (tweet) {
         const favorites = getFavorites();
         const favoriteAccounts = getFavoriteAccounts();
-        tweet = enrichTweet(tweet, favorites, favoriteAccounts);
+        tweet = enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText, this);
       }
       return tweet;
     } catch (error) {
@@ -53,10 +54,24 @@ class TweetService {
     }
   }
 
-  async getTweetsByUsername(username, page = 1, pageSize = 10) {
+  async getTweetByIdRaw(tweetId) {
     try {
       const collection = await this.getCollection();
-      const allTweets = await collection.find({ compte: username }).toArray();
+      return await collection.findOne({ id: tweetId });
+    } catch (error) {
+      console.error(`Error getting raw tweet by ID ${tweetId}:`, error);
+      throw error;
+    }
+  }
+
+  async getTweetsByUsername(username, page = 1, pageSize = 10, formatTweetText, tweetServiceInstance, searchQuery = '') {
+    try {
+      const collection = await this.getCollection();
+      let query = { compte: username };
+      if (searchQuery) {
+        query.texte = { $regex: searchQuery, $options: 'i' };
+      }
+      const allTweets = await collection.find(query).toArray();
       
       allTweets.sort((a, b) => new Date(b.date) - new Date(a.date));
       
@@ -67,7 +82,7 @@ class TweetService {
       const favorites = getFavorites();
       const favoriteAccounts = getFavoriteAccounts();
       const enrichedTweets = paginatedTweets.map(tweet => 
-        enrichTweet(tweet, favorites, favoriteAccounts)
+        enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText, tweetServiceInstance)
       );
       
       return {
@@ -82,7 +97,7 @@ class TweetService {
     }
   }
 
-  async searchTweets(query, page = 1, pageSize = 10) {
+  async searchTweets(query, page = 1, pageSize = 10, formatTweetText) {
     try {
       const collection = await this.getCollection();
       const searchRegex = new RegExp(query, 'i');
@@ -94,22 +109,26 @@ class TweetService {
           { compte: { $regex: searchRegex } }
         ]
       }).toArray();
+
+      const hiddenAccounts = getHiddenAccounts();
+      const hiddenTweets = getHiddenTweets();
+      const filteredResults = allResults.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
       
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
-      const paginatedResults = allResults.slice(startIndex, endIndex);
+      const paginatedResults = filteredResults.slice(startIndex, endIndex);
       
       const favorites = getFavorites();
       const favoriteAccounts = getFavoriteAccounts();
       const enrichedResults = paginatedResults.map(tweet => 
-        enrichTweet(tweet, favorites, favoriteAccounts)
+        enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText)
       );
       
       return {
         tweets: enrichedResults,
         currentPage: page,
-        totalPages: Math.ceil(allResults.length / pageSize),
-        totalResults: allResults.length
+        totalPages: Math.ceil(filteredResults.length / pageSize),
+        totalResults: filteredResults.length
       };
     } catch (error) {
       console.error('Error searching tweets:', error);
@@ -117,9 +136,15 @@ class TweetService {
     }
   }
 
-  async getPaginatedTweets(page = 1) {
+  async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '') {
     try {
-      const allTweets = await this.getAllTweets();
+      let allTweets = await this.getAllTweets();
+
+      if (searchQuery) {
+        const searchRegex = new RegExp(searchQuery, 'i');
+        allTweets = allTweets.filter(tweet => searchRegex.test(tweet.compte));
+      }
+
       const startIndex = (page - 1) * this.tweetsPerPage;
       const endIndex = startIndex + this.tweetsPerPage;
       
@@ -136,7 +161,7 @@ class TweetService {
   
       const sortedAccounts = Object.entries(uniqueAccounts)
         .map(([account, count]) => ({ account, count }))
-        .sort((a, b) => b.count - a.count).map(account => account.account);
+        .sort((a, b) => b.count - a.count)
 
       return {
         tweets: shuffledTweets.slice(startIndex, endIndex),
@@ -164,7 +189,7 @@ class TweetService {
         .filter(([account, count]) => count > 10) // Filter accounts with more than 10 tweets
         .map(([account, count]) => ({ account, count }))
         .sort((a, b) => b.count - a.count)
-        .map(item => item.account);
+        
     } catch (error) {
       console.error('Error getting unique accounts:', error);
       throw error;
@@ -243,8 +268,14 @@ class TweetService {
       const favoriteAccounts = getFavoriteAccounts();
       let favoriteAccountTweets = allTweets.filter(tweet => favoriteAccounts.includes(tweet.compte));
       favoriteAccountTweets = favoriteAccountTweets.sort(() => Math.random() - 0.5); // Randomize the tweets
-      const uniqueAccounts = allTweets.map(tweet => tweet.compte).filter((value, index, self) => self.indexOf(value) === index).sort();
-      return { tweets: favoriteAccountTweets, favoriteAccounts: favoriteAccounts, allAccounts: uniqueAccounts };
+      const uniqueAccounts = allTweets.map(tweet => tweet.compte).filter((value, index, self) => self.indexOf(value) === index).sort()
+      .map(account => ({
+        account,
+        count: allTweets.filter(tweet => tweet.compte === account).length
+      }))
+      .sort((a, b) => b.count - a.count);
+      const favoriteAccountsWithCounts = uniqueAccounts.filter(account => favoriteAccounts.includes(account.account));
+      return { tweets: favoriteAccountTweets, favoriteAccounts: favoriteAccountsWithCounts, allAccounts: uniqueAccounts };
     } catch (error) {
       console.error('Error getting favorite accounts tweets:', error);
       throw error;
@@ -269,9 +300,9 @@ class TweetService {
     }
   }
 
-  async getProfileMedia(username, page = 1) {
+  async getProfileMedia(username, page = 1, formatTweetText, tweetServiceInstance) {
     try {
-      let userTweets = await this.getTweetsByUsername(username, 1, 1000); // Get all tweets for user
+      let userTweets = await this.getTweetsByUsername(username, 1, 1000, formatTweetText, tweetServiceInstance); // Get all tweets for user
       const user = userTweets.tweets.length > 0 ? { name: userTweets.tweets[0].compte, username: userTweets.tweets[0].compte } : null;
       
       let allMedia = [];
@@ -319,9 +350,9 @@ class TweetService {
     }
   }
 
-  async getProfileData(username, page = 1) {
+  async getProfileData(username, page = 1, searchQuery = '') {
     try {
-      let userTweets = await this.getTweetsByUsername(username, 1, 1000); // Get all tweets for user
+      let userTweets = await this.getTweetsByUsername(username, 1, 1000, null, null, searchQuery); // Get all tweets for user
       const user = userTweets.tweets.length > 0 ? { name: userTweets.tweets[0].compte, username: userTweets.tweets[0].compte } : null;
 
       if (!user) {
@@ -448,6 +479,15 @@ class TweetService {
       return { tweets: mediaTweets };
     } catch (error) {
       console.error(`Error getting tweets with media for user ${username}:`, error);
+      throw error;
+    }
+  }
+
+  async hideTweet(tweetId) {
+    try {
+      return updateHiddenTweets(tweetId, 'add');
+    } catch (error) {
+      console.error(`Error hiding tweet ${tweetId}:`, error);
       throw error;
     }
   }

@@ -1,9 +1,25 @@
 <div class="tweet-card">
+    <% if (tweet.isRetweet) { %>
+        <div class="retweet-info">
+            <p>🔁 Retweeted by <a href="/profile/<%= tweet.retweetedBy %>">@<%= tweet.retweetedBy %></a></p>
+        </div>
+    <% } %>
     <div class="tweet-header">
         <img src="/public/images/profiles/<%= tweet.compte %>.png" alt="Profile Picture for <%= tweet.compte %>" class="profile-pic-tweet" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
         <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> - <%= new Date(tweet.date).toLocaleDateString() %></p>
     </div>
     <p><%- formatTweetText(tweet.texte) %></p>
+    <% if (tweet.formattedQuote) { %>
+        <div class="tweet-quote">
+            <p><%- tweet.formattedQuote %></p>
+        </div>
+    <% } %>
+
+    <% if (tweet.quotedTweet) { %>
+        <div class="quoted-tweet-card">
+            <%- include('tweetCard', { tweet: tweet.quotedTweet, formatTweetText: formatTweetText }) %>
+        </div>
+    <% } %>
     <% if (tweet.allMedia && tweet.allMedia.length > 0) { %>
         <div class="tweet-media">
             <% tweet.allMedia.forEach(media => { %>
@@ -26,5 +42,8 @@
             <button type="submit"><%= tweet.isFavoriteAccount ? 'Unfavorite Account' : 'Favorite Account' %></button>
         </form>
         <a href="/tweet/<%= tweet.id %>">View Tweet</a>
+        <form action="/hide-tweet/<%= tweet.id %>" method="post" style="display: inline;">
+            <button type="submit">Hide Tweet</button>
+        </form>
     </div>
 </div>
