@@ -8,9 +8,53 @@ const errorHandler = require('./middleware/errorHandler');
 // Initialize Express app
 const app = express();
 
+// Session setup
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'supersecretkey',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/twitter_db',
+    ttl: 14 * 24 * 60 * 60, // 14 days
+    autoRemove: 'interval',
+    autoRemoveInterval: 10 // In minutes. Removes expired sessions every 10 minutes
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true
+  }
+}));
+
+// Middleware to store previous URLs
+app.use((req, res, next) => {
+  if (!req.session.previousUrls) {
+    req.session.previousUrls = [];
+  }
+
+  // Only store URLs that are not from the /public directory
+  if (!req.originalUrl.startsWith('/public')) {
+    // Add current URL to the beginning of the array
+    // Only if it's not the same as the last one (to avoid duplicates on refresh)
+    if (req.session.previousUrls[0] !== req.originalUrl) {
+      req.session.previousUrls.unshift(req.originalUrl);
+    }
+
+    // Keep only the last two URLs
+    if (req.session.previousUrls.length > 2) {
+      req.session.previousUrls.pop();
+    }
+  }
+  next();
+});
 
 // Middleware
 app.use(express.json());

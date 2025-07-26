@@ -11,13 +11,23 @@ async function runProfileDownloadAndCount() {
     console.log("Database connected.");
 
     console.log("Starting profile picture download and tweet count...");
-    const allAccounts = await tweetService.getUniqueAccounts();
-    console.log(`Found ${allAccounts.length} unique accounts.`);
+
+    // Get all tweets from MongoDB
+    const allTweets = await tweetService.getAllTweets(false); // Get all tweets, don't filter hidden
+    
+    // Use a Set to get unique account names
+    const uniqueAccounts = new Set();
+    allTweets.forEach(tweet => {
+      uniqueAccounts.add(tweet.compte);
+    });
+    const allAccounts = Array.from(uniqueAccounts);
+
+    console.log(`Found ${allAccounts.length} unique accounts from MongoDB.`);
     for (const account of allAccounts) {
       await fileUtils.downloadProfilePicture(account);
     }
     console.log("All profile pictures processed.");
-    const allTweets = await tweetService.getAllTweets(false);
+  
     const totalTweets = allTweets.length;
     console.log(`Total number of tweets: ${totalTweets}`);
     const outputPath = path.join(__dirname, "total_tweets.txt");

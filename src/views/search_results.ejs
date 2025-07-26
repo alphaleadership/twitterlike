@@ -7,7 +7,13 @@
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
-    <h1>Search Results for "<%= query %>"</h1>
-    <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+    <div class="container">
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <div class="main-content">
+            <h1>Search Results for "<%= query %>"</h1>
+            <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+            <%- include('partials/pagination', { currentPage: currentPage||1, totalPages: totalPages, baseUrl: '/search?query=' + query }) %>
+        </div>
+    </div>
 </body>
 </html>

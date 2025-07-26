@@ -12,11 +12,18 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "browserless": "^10.7.11",
+    "connect-mongo": "^5.1.0",
     "dotenv": "^17.2.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "html-get": "^2.21.8",
+    "metascraper": "^5.49.1",
+    "metascraper-date": "^5.49.1",
     "mongodb": "^6.17.0",
     "morgan": "^1.10.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "puppeteer-core": "^24.15.0"
   }
 }
