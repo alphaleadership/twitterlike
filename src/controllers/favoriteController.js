@@ -1,9 +1,9 @@
-const favoriteService = require('../services/favoriteService');
+const tweetService = require('../services/tweetService');
 
 const favoriteController = {
   async getFavorites(req, res) {
     try {
-      const favorites = await favoriteService.getFavorites();
+      const favorites = await tweetService.getFavoriteTweets(req.user.id);
       res.json({ favorites });
     } catch (error) {
       console.error('Error getting favorites:', error);
@@ -14,7 +14,7 @@ const favoriteController = {
   async addFavorite(req, res) {
     try {
       const { id } = req.params;
-      await favoriteService.addFavorite(id);
+      await tweetService.addLike(req.user.id, id);
       res.json({ success: true });
     } catch (error) {
       console.error('Error adding favorite:', error);
@@ -25,22 +25,11 @@ const favoriteController = {
   async removeFavorite(req, res) {
     try {
       const { id } = req.params;
-      await favoriteService.removeFavorite(id);
+      await tweetService.removeLike(req.user.id, id);
       res.json({ success: true });
     } catch (error) {
       console.error('Error removing favorite:', error);
       res.status(500).json({ error: 'Error removing favorite' });
-    }
-  },
-
-  async checkFavorite(req, res) {
-    try {
-      const { id } = req.params;
-      const isFavorite = await favoriteService.isFavorite(id);
-      res.json({ isFavorite });
-    } catch (error) {
-      console.error('Error checking favorite status:', error);
-      res.status(500).json({ error: 'Error checking favorite status' });
     }
   }
 };

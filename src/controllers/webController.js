@@ -251,6 +251,30 @@ const webController = {
     }
   },
 
+  async renderFavoriteAccountsMedia(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const userId = req.session.userId;
+      const { tweets, currentPage, totalPages, totalMedia } = await tweetService.getFavoriteAccountsMedia(userId, page);
+      const allAccounts = await tweetService.getUniqueAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      res.render('favorite_accounts_media', {
+        media: tweets,
+        currentPage,
+        totalPages,
+        totalMedia,
+        formatTweetText,
+        allAccounts,
+        favoriteAccounts,
+        isLoggedIn: !!req.session.userId,
+        username: req.session.username
+      });
+    } catch (error) {
+      console.error('Error rendering favorite accounts media page:', error);
+      res.status(500).send('Error rendering favorite accounts media page');
+    }
+  },
+
   async hideAccount(req, res) {
     try {
       const username = req.params.username;

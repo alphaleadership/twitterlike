@@ -19,6 +19,7 @@ router.get('/profile/:username', tweetController.getTweetsByUsername);
 // Media routes
 router.get('/media', tweetController.getTweetsWithMedia);
 router.get('/videos', tweetController.getTweetsWithVideos);
+router.get('/favorite_accounts/media', tweetController.getFavoriteAccountsMedia);
 
 // Account routes
 router.get('/accounts', accountController.getAccounts);
@@ -31,6 +32,5 @@ router.post('/unfavorite_account/:username', accountController.removeFavoriteAcc
 router.get('/favorites', favoriteController.getFavorites);
 router.post('/favorite/:id', favoriteController.addFavorite);
 router.post('/unfavorite/:id', favoriteController.removeFavorite);
-router.get('/favorite/:id', favoriteController.checkFavorite);
 
 module.exports = router;
