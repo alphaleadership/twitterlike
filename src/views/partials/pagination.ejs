@@ -1,9 +1,19 @@
 <div class="pagination">
+    <% 
+    const queryParams = new URLSearchParams();
+    if (locals.query) { queryParams.set('query', locals.query); }
+    if (locals.search) { queryParams.set('search', locals.search); }
+    %>
+
     <% if (currentPage > 1) { %>
-        <a href="?page=<%= currentPage - 1 %>">Previous</a>
+        <% queryParams.set('page', currentPage - 1); %>
+        <a href="?<%= queryParams.toString() %>">Previous</a>
     <% } %>
+
     <span>Page <%= currentPage %> of <%= totalPages %></span>
+
     <% if (currentPage < totalPages) { %>
-        <a href="?page=<%= currentPage + 1 %>">Next</a>
+        <% queryParams.set('page', currentPage + 1); %>
+        <a href="?<%= queryParams.toString() %>">Next</a>
     <% } %>
 </div>

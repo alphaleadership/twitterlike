@@ -6,6 +6,7 @@ const favoriteController = require('../controllers/favoriteController');
 
 // Tweet routes
 router.get('/tweets', tweetController.getTweets);
+router.post('/tweets', tweetController.createTweet);
 router.get('/search', tweetController.searchTweets);
 
 // Profile routes

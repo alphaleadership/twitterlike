@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Hidden Tweets</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Hidden Tweets</h1>
+        <a href="/admin">Back to Dashboard</a>
+        <% if (hiddenTweets.length > 0) { %>
+            <ul>
+                <% hiddenTweets.forEach(tweetId => { %>
+                    <li>
+                        <%= tweetId %>
+                        <form action="/admin/tweets/unhide/<%= tweetId %>" method="post" style="display: inline;">
+                            <button type="submit">Unhide</button>
+                        </form>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No tweets are currently hidden.</p>
+        <% } %>
+    </div>
+</body>
+</html>

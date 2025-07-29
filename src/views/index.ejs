@@ -22,7 +22,7 @@
                 </form>
             </div>
 
-            <%- include('partials/tweetList', { tweets: tweets }) %>
+            <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn }) %>
             <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/' }) %>
         </div>
     </div>

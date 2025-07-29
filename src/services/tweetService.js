@@ -1,6 +1,7 @@
 const { getDb } = require('../config/db');
 const { getHiddenAccounts, getFavorites, getFavoriteAccounts, updateFavorites, appendAccountToFile, getHiddenTweets, updateHiddenTweets } = require('../utils/fileUtils');
 const { enrichTweet, videofilter } = require('../utils/mediaUtils');
+const Like = require('../models/Like');
 
 class TweetService {
   constructor() {
@@ -15,7 +16,7 @@ class TweetService {
     return db.collection(this.collectionName);
   }
 
-  async getAllTweets(filterHidden = true) {
+  async getAllTweets(filterHidden = true, userId = null) {
     try {
       const collection = await this.getCollection();
       let tweets = await collection.find({}).toArray();
@@ -26,11 +27,15 @@ class TweetService {
         tweets = tweets.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
       }
       
-      const favorites = getFavorites();
-      const favoriteAccounts = getFavoriteAccounts();
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
       
       return tweets.map(tweet => 
-        enrichTweet(tweet, favorites, favoriteAccounts)
+        enrichTweet(tweet, userLikes, userLikedAccounts)
       );
     } catch (error) {
       console.error('Error getting all tweets:', error);
@@ -38,14 +43,18 @@ class TweetService {
     }
   }
 
-  async getTweetById(tweetId, formatTweetText) {
+  async getTweetById(tweetId, formatTweetText, userId = null) {
     try {
       const collection = await this.getCollection();
       let tweet = await collection.findOne({ id: tweetId });
       if (tweet) {
-        const favorites = getFavorites();
-        const favoriteAccounts = getFavoriteAccounts();
-        tweet = enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText, this);
+        let userLikes = [];
+        let userLikedAccounts = [];
+        if (userId) {
+          userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+          userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+        }
+        tweet = enrichTweet(tweet, userLikes, userLikedAccounts, formatTweetText, this);
       }
       return tweet;
     } catch (error) {
@@ -64,7 +73,7 @@ class TweetService {
     }
   }
 
-  async getTweetsByUsername(username, page = 1, pageSize = 10, formatTweetText, tweetServiceInstance, searchQuery = '') {
+  async getTweetsByUsername(username, page = 1, pageSize = 10, formatTweetText, tweetServiceInstance, searchQuery = '', userId = null) {
     try {
       const collection = await this.getCollection();
       let query = { compte: username };
@@ -79,10 +88,14 @@ class TweetService {
       const endIndex = startIndex + pageSize;
       const paginatedTweets = allTweets.slice(startIndex, endIndex);
       
-      const favorites = getFavorites();
-      const favoriteAccounts = getFavoriteAccounts();
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
       const enrichedTweets = paginatedTweets.map(tweet => 
-        enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText, tweetServiceInstance)
+        enrichTweet(tweet, userLikes, userLikedAccounts, formatTweetText, tweetServiceInstance)
       );
       
       return {
@@ -97,7 +110,7 @@ class TweetService {
     }
   }
 
-  async searchTweets(query, page = 1, pageSize = 10, formatTweetText) {
+  async searchTweets(query, page = 1, pageSize = 10, formatTweetText, userId = null) {
     try {
       const collection = await this.getCollection();
       const searchRegex = new RegExp(query, 'i');
@@ -118,17 +131,34 @@ class TweetService {
       const endIndex = startIndex + pageSize;
       const paginatedResults = filteredResults.slice(startIndex, endIndex);
       
-      const favorites = getFavorites();
-      const favoriteAccounts = getFavoriteAccounts();
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
       const enrichedResults = paginatedResults.map(tweet => 
-        enrichTweet(tweet, favorites, favoriteAccounts, formatTweetText)
+        enrichTweet(tweet, userLikes, userLikedAccounts, formatTweetText)
       );
       
+      const uniqueAccounts = {};
+      filteredResults.forEach(tweet => {
+        if (!hiddenAccounts.includes(tweet.compte)) {
+          uniqueAccounts[tweet.compte] = (uniqueAccounts[tweet.compte] || 0) + 1;
+        }
+      });
+  
+      const sortedAccounts = Object.entries(uniqueAccounts)
+        .map(([account, count]) => ({ account, count }))
+        .sort((a, b) => b.count - a.count)
+
       return {
         tweets: enrichedResults,
         currentPage: page,
         totalPages: Math.ceil(filteredResults.length / pageSize),
-        totalResults: filteredResults.length
+        totalResults: filteredResults.length,
+        allAccounts: sortedAccounts,
+        favoriteAccounts: userLikedAccounts
       };
     } catch (error) {
       console.error('Error searching tweets:', error);
@@ -136,9 +166,9 @@ class TweetService {
     }
   }
 
-  async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '') {
+  async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '', userId = null) {
     try {
-      let allTweets = await this.getAllTweets();
+      let allTweets = await this.getAllTweets(true, userId);
 
       if (searchQuery) {
         const searchRegex = new RegExp(searchQuery, 'i');
@@ -151,7 +181,10 @@ class TweetService {
       const shuffledTweets = [...allTweets].sort(() => Math.random() - 0.5);
       
       const hiddenAccounts = getHiddenAccounts();
-      const favoriteAccounts = getFavoriteAccounts();
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
       const uniqueAccounts = {};
       allTweets.forEach(tweet => {
         if (!hiddenAccounts.includes(tweet.compte)) {
@@ -168,7 +201,7 @@ class TweetService {
         currentPage: page,
         totalPages: Math.ceil(allTweets.length / this.tweetsPerPage),
         allAccounts: sortedAccounts,
-        favoriteAccounts: favoriteAccounts
+        favoriteAccounts: userLikedAccounts
       };
     } catch (error) {
       console.error('Error getting paginated tweets:', error);
@@ -176,9 +209,9 @@ class TweetService {
     }
   }
 
-  async getUniqueAccounts() {
+  async getUniqueAccounts(userId = null) {
     try {
-      const allTweets = await this.getAllTweets();
+      const allTweets = await this.getAllTweets(true, userId);
       const accountCounts = {};
       
       allTweets.forEach(tweet => {
@@ -196,9 +229,9 @@ class TweetService {
     }
   }
 
-  async getTweetsWithMedia(page = 1) {
+  async getTweetsWithMedia(page = 1, userId = null) {
     try {
-      const allTweets = await this.getAllTweets();
+      const allTweets = await this.getAllTweets(true, userId);
       
       const mediaTweets = allTweets.filter(tweet => 
         (tweet.media && tweet.media.length > 0) || 
@@ -223,9 +256,9 @@ class TweetService {
     }
   }
 
-  async getTweetsWithVideos(page = 1) {
+  async getTweetsWithVideos(page = 1, userId = null) {
     try {
-      const allTweets = await this.getAllTweets();
+      const allTweets = await this.getAllTweets(true, userId);
       
       const videoTweets = allTweets.filter(tweet => 
         tweet.video && tweet.video.length > 0
@@ -249,12 +282,12 @@ class TweetService {
     }
   }
 
-  async getFavoriteTweets() {
+  async getFavoriteTweets(userId) {
     try {
-      const allTweets = await this.getAllTweets(false); // Do not filter hidden accounts here
-      const favorites = getFavorites();
-      const favoriteTweets = allTweets.filter(tweet => favorites.includes(tweet.id));
-      const favoriteAccounts = getFavoriteAccounts();
+      const allTweets = await this.getAllTweets(false, userId); // Do not filter hidden accounts here
+      const userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+      const favoriteTweets = allTweets.filter(tweet => userLikes.includes(tweet.id));
+      const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       return { tweets: favoriteTweets, favoriteAccounts: favoriteAccounts };
     } catch (error) {
       console.error('Error getting favorite tweets:', error);
@@ -262,10 +295,10 @@ class TweetService {
     }
   }
 
-  async getFavoriteAccountsTweets() {
+  async getFavoriteAccountsTweets(userId) {
     try {
-      const allTweets = await this.getAllTweets(false); // Do not filter hidden accounts here
-      const favoriteAccounts = getFavoriteAccounts();
+      const allTweets = await this.getAllTweets(false, userId); // Do not filter hidden accounts here
+      const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       let favoriteAccountTweets = allTweets.filter(tweet => favoriteAccounts.includes(tweet.compte));
       favoriteAccountTweets = favoriteAccountTweets.sort(() => Math.random() - 0.5); // Randomize the tweets
       const uniqueAccounts = allTweets.map(tweet => tweet.compte).filter((value, index, self) => self.indexOf(value) === index).sort()
@@ -282,16 +315,16 @@ class TweetService {
     }
   }
 
-  async searchTweetsAndRender(query) {
+  async searchTweetsAndRender(query, userId = null) {
     try {
-      const allTweets = await this.getAllTweets();
+      const allTweets = await this.getAllTweets(true, userId);
       const searchResults = allTweets.filter(tweet => {
         const tweetText = tweet.texte ? tweet.texte.toLowerCase() : '';
         const hashtags = tweet.hashtags ? tweet.hashtags.map(tag => tag.text.toLowerCase()) : [];
         
         return tweetText.includes(query.toLowerCase()) || hashtags.some(tag => tag.includes(query.toLowerCase()));
       });
-      const favoriteAccounts = getFavoriteAccounts();
+      const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       const uniqueAccounts = allTweets.map(tweet => tweet.compte).filter((value, index, self) => self.indexOf(value) === index).sort();
       return { tweets: searchResults, allAccounts: uniqueAccounts, favoriteAccounts: favoriteAccounts };
     } catch (error) {
@@ -300,9 +333,9 @@ class TweetService {
     }
   }
 
-  async getProfileMedia(username, page = 1, formatTweetText, tweetServiceInstance) {
+  async getProfileMedia(username, page = 1, formatTweetText, tweetServiceInstance, userId = null) {
     try {
-      let userTweets = await this.getTweetsByUsername(username, 1, 1000, formatTweetText, tweetServiceInstance); // Get all tweets for user
+      let userTweets = await this.getTweetsByUsername(username, 1, 1000, formatTweetText, tweetServiceInstance, '', userId); // Get all tweets for user
       const user = userTweets.tweets.length > 0 ? { name: userTweets.tweets[0].compte, username: userTweets.tweets[0].compte } : null;
       
       let allMedia = [];
@@ -325,9 +358,9 @@ class TweetService {
     }
   }
 
-  async getProfileVideos(username, page = 1) {
+  async getProfileVideos(username, page = 1, userId = null) {
     try {
-      let userTweets = await this.getTweetsByUsername(username, 1, 1000); // Get all tweets for user
+      let userTweets = await this.getTweetsByUsername(username, 1, 1000, null, null, '', userId); // Get all tweets for user
       const user = userTweets.tweets.length > 0 ? { name: userTweets.tweets[0].compte, username: userTweets.tweets[0].compte } : null;
 
       let allVideos = [];
@@ -350,9 +383,9 @@ class TweetService {
     }
   }
 
-  async getProfileData(username, page = 1, searchQuery = '') {
+  async getProfileData(username, page = 1, searchQuery = '', userId = null) {
     try {
-      let userTweets = await this.getTweetsByUsername(username, 1, 1000, null, null, searchQuery); // Get all tweets for user
+      let userTweets = await this.getTweetsByUsername(username, 1, 1000, null, null, searchQuery, userId); // Get all tweets for user
       const user = userTweets.tweets.length > 0 ? { name: userTweets.tweets[0].compte, username: userTweets.tweets[0].compte } : null;
 
       if (!user) {
@@ -416,9 +449,9 @@ class TweetService {
     }
   }
 
-  async getAllMedia(page = 1) {
+  async getAllMedia(page = 1, userId = null) {
     try {
-      const allTweets = await this.getAllTweets();
+      const allTweets = await this.getAllTweets(true, userId);
 
       let allMedia = [];
       allTweets.forEach(tweet => {
@@ -441,38 +474,20 @@ class TweetService {
   }
 
   async addFavorite(tweetId) {
-    try {
-      return updateFavorites(tweetId, 'add');
-    } catch (error) {
-      console.error(`Error adding favorite for tweet ${tweetId}:`, error);
-      throw error;
-    }
+    throw new Error('addFavorite is deprecated. Use addLike instead.');
   }
 
   async removeFavorite(tweetId) {
-    try {
-      return updateFavorites(tweetId, 'remove');
-    } catch (error) {
-      console.error(`Error removing favorite for tweet ${tweetId}:`, error);
-      throw error;
-    }
+    throw new Error('removeFavorite is deprecated. Use removeLike instead.');
   }
 
   async addMultipleFavorites(tweetIds) {
-    try {
-      for (const tweetId of tweetIds) {
-        await updateFavorites(tweetId, 'add');
-      }
-      return true;
-    } catch (error) {
-      console.error(`Error adding multiple favorites:`, error);
-      throw error;
-    }
+    throw new Error('addMultipleFavorites is deprecated. Use addMultipleLikes instead.');
   }
 
-  async getTweetsWithMediaByUsername(username, page = 1, pageSize = 10) {
+  async getTweetsWithMediaByUsername(username, page = 1, pageSize = 10, userId = null) {
     try {
-      const { tweets } = await this.getTweetsByUsername(username, page, pageSize); // Get all tweets for user
+      const { tweets } = await this.getTweetsByUsername(username, page, pageSize, null, null, '', userId); // Get all tweets for user
       const mediaTweets = tweets.filter(tweet => 
         (tweet.allMedia && tweet.allMedia.length > 0)
       );
@@ -488,6 +503,69 @@ class TweetService {
       return updateHiddenTweets(tweetId, 'add');
     } catch (error) {
       console.error(`Error hiding tweet ${tweetId}:`, error);
+      throw error;
+    }
+  }
+
+  async addLike(userId, tweetId = null, accountUsername = null) {
+    try {
+      if (tweetId) {
+        await Like.findOneAndUpdate(
+          { userId, tweetId },
+          { $set: { userId, tweetId } },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } else if (accountUsername) {
+        await Like.findOneAndUpdate(
+          { userId, accountUsername },
+          { $set: { userId, accountUsername } },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      }
+      return true;
+    } catch (error) {
+      console.error('Error adding like:', error);
+      throw error;
+    }
+  }
+
+  async removeLike(userId, tweetId = null, accountUsername = null) {
+    try {
+      if (tweetId) {
+        await Like.deleteOne({ userId, tweetId });
+      } else if (accountUsername) {
+        await Like.deleteOne({ userId, accountUsername });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error removing like:', error);
+      throw error;
+    }
+  }
+
+  async addMultipleLikes(userId, tweetIds) {
+    try {
+      const likes = tweetIds.map(tweetId => ({ userId, tweetId }));
+      await Like.insertMany(likes, { ordered: false });
+      return true;
+    } catch (error) {
+      console.error('Error adding multiple likes:', error);
+      throw error;
+    }
+  }
+
+  async createTweet(tweetData) {
+    try {
+      const collection = await this.getCollection();
+      const newTweet = {
+        id: new Date().getTime().toString(),
+        ...tweetData,
+        date: new Date().toISOString(),
+      };
+      await collection.insertOne(newTweet);
+      return newTweet;
+    } catch (error) {
+      console.error('Error creating tweet:', error);
       throw error;
     }
   }

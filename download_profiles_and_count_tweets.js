@@ -24,7 +24,7 @@ async function runProfileDownloadAndCount() {
 
     console.log(`Found ${allAccounts.length} unique accounts from MongoDB.`);
     for (const account of allAccounts) {
-      await fileUtils.downloadProfilePicture(account);
+      await fileUtils.downloadProfilePicture({account: account});
     }
     console.log("All profile pictures processed.");
   

@@ -13,12 +13,12 @@ router.get('/tweet/:id', webController.renderTweetDetail);
 router.get('/all_media', webController.renderAllMedia);
 
 router.post('/hide/:username', webController.hideAccount);
-router.post('/favorite/:id', webController.addFavorite);
-router.post('/unfavorite/:id', webController.removeFavorite);
-router.post('/favorite_account/:username', webController.addFavoriteAccount);
-router.post('/unfavorite_account/:username', webController.removeFavoriteAccount);
-router.post('/add_all_tweets_to_favorites/:username', webController.addAllTweetsToFavorites);
-router.post('/add_all_media_tweets_to_favorites/:username', webController.addAllMediaTweetsToFavorites);
+router.post('/like/:id', webController.addFavorite);
+router.post('/unlike/:id', webController.removeFavorite);
+router.post('/like-account/:username', webController.addFavoriteAccount);
+router.post('/unlike-account/:username', webController.removeFavoriteAccount);
+router.post('/like-all-tweets/:username', webController.addAllTweetsToFavorites);
+router.post('/like-all-media-tweets/:username', webController.addAllMediaTweetsToFavorites);
 router.post('/hide-tweet/:id', webController.hideTweet);
 
 module.exports = router;

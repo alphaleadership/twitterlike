@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Favorite Accounts Tweets</title>
+    <title>Liked Accounts Tweets</title>
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
     <div class="container">
         <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts, searchQuery: '' }) %>
         <div class="main-content">
-            <h1>Tweets from Your Favorite Accounts</h1>
+            <h1>Tweets from Your Liked Accounts</h1>
 
             <!-- Search Form -->
             <div class="mb-4">
@@ -22,7 +22,7 @@
                 </form>
             </div>
 
-            <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+            <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
         </div>
     </div>
 </body>
