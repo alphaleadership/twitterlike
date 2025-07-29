@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <p>Welcome to the admin panel!</p>
+        <ul>
+            <li><a href="/admin/accounts">Manage Hidden Accounts</a></li>
+            <li><a href="/admin/tweets">Manage Hidden Tweets</a></li>
+            <li><a href="/admin/users">Manage Users</a></li>
+        </ul>
+        <form action="/admin/logout" method="post">
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -22,13 +22,13 @@ const videofilter = (tweet) => {
   return good;
 };
 
-const enrichTweet = (tweet, favorites, favoriteAccounts, formatTextFunction, tweetService) => {
+const enrichTweet = (tweet, userLikes, userLikedAccounts, formatTextFunction, tweetService) => {
   // Check if it's a retweet
   if (tweet.retweeted_status) {
     const originalTweet = tweet.retweeted_status;
     originalTweet.isRetweet = false; // Mark original as not a retweet
     return {
-      ...enrichTweet(originalTweet, favorites, favoriteAccounts, formatTextFunction, tweetService), // Recursively enrich original tweet
+      ...enrichTweet(originalTweet, userLikes, userLikedAccounts, formatTextFunction, tweetService), // Recursively enrich original tweet
       isRetweet: true,
       retweetedBy: tweet.compte // Add who retweeted it
     };
@@ -42,8 +42,8 @@ const enrichTweet = (tweet, favorites, favoriteAccounts, formatTextFunction, twe
     allMedia = allMedia.concat(videofilter(tweet));
   }
   tweet.allMedia = allMedia;
-  tweet.isFavorite = favorites.includes(tweet.id);
-  tweet.isFavoriteAccount = favoriteAccounts.includes(tweet.compte);
+  tweet.isLiked = userLikes.includes(tweet.id);
+  tweet.isAccountLiked = userLikedAccounts.includes(tweet.compte);
 
   // Format quote if it exists
   if (tweet.quote) {

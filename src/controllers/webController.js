@@ -1,6 +1,7 @@
 const tweetService = require('../services/tweetService');
 const accountService = require('../services/accountService');
 const fileUtils = require('../utils/fileUtils');
+const Like = require('../models/Like');
 
 const formatTweetText = (text) => {
   let formattedText = text.replace(/@(\w+)/g, '<a href="/profile/$1">@$1</a>');
@@ -20,7 +21,7 @@ const webController = {
 
       const page = parseInt(req.query.page) || 1;
       const searchQuery = req.query.search || '';
-      const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.getPaginatedTweets(page, formatTweetText, searchQuery);
+      const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.getPaginatedTweets(page, formatTweetText, searchQuery, req.session.userId);
       res.render('index', {
         tweets,
         currentPage,
@@ -29,7 +30,9 @@ const webController = {
         allAccounts,
         favoriteAccounts,
         searchQuery,
-        pageViews: req.session.pageViews // Pass pageViews to the template
+        pageViews: req.session.pageViews, // Pass pageViews to the template
+        isLoggedIn: !!req.session.userId,
+        username: req.session.username
       });
     } catch (error) {
       console.error('Error rendering index page:', error);
@@ -39,9 +42,10 @@ const webController = {
 
   async renderFavorites(req, res) {
     try {
-      const { tweets, favoriteAccounts } = await tweetService.getFavoriteTweets();
-      const allAccounts = await tweetService.getUniqueAccounts();
-      res.render('favorites', { tweets, formatTweetText, favoriteAccounts, allAccounts });
+      const userId = req.session.userId;
+      const { tweets, favoriteAccounts } = await tweetService.getFavoriteTweets(userId);
+      const allAccounts = await tweetService.getUniqueAccounts(userId);
+      res.render('favorites', { tweets, formatTweetText, favoriteAccounts, allAccounts, isLoggedIn: !!req.session.userId, username: req.session.username });
     } catch (error) {
       console.error('Error rendering favorites page:', error);
       res.status(500).send('Error rendering favorites page');
@@ -50,9 +54,10 @@ const webController = {
 
   async renderFavoriteAccountsTweets(req, res) {
     try {
-      const { tweets, favoriteAccounts, allAccounts } = await tweetService.getFavoriteAccountsTweets();
+      const userId = req.session.userId;
+      const { tweets, favoriteAccounts, allAccounts } = await tweetService.getFavoriteAccountsTweets(userId);
       const favoriteAccountsWithCounts = allAccounts.filter(account => favoriteAccounts.includes(account));
-      res.render('favorite_accounts_tweets', { tweets, formatTweetText, favoriteAccounts, allAccounts: favoriteAccounts });
+      res.render('favorite_accounts_tweets', { tweets, formatTweetText, favoriteAccounts, allAccounts: favoriteAccounts, isLoggedIn: !!req.session.userId, username: req.session.username });
     } catch (error) {
       console.error('Error rendering favorite accounts tweets page:', error);
       res.status(500).send('Error rendering favorite accounts tweets page');
@@ -64,7 +69,7 @@ const webController = {
       const query = req.query.query || '';
       console.log(query)
       const page = parseInt(req.query.page) || 1;
-      const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.searchTweets(query, page);
+      const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.searchTweets(query, page, 10, formatTweetText, req.session.userId);
       res.render('search_results', {
         tweets,
         formatTweetText,
@@ -72,7 +77,9 @@ const webController = {
         currentPage,
         totalPages,
         favoriteAccounts:favoriteAccounts||[] ,
-        allAccounts:allAccounts||[]
+        allAccounts:allAccounts||[],
+        isLoggedIn: !!req.session.userId,
+        username: req.session.username
       });
     } catch (error) {
       console.error('Error rendering search results page:', error);
@@ -84,7 +91,7 @@ const webController = {
     try {
       const username = req.params.username;
       const page = parseInt(req.query.page) || 1;
-      const { user, media, currentPage, totalPages } = await tweetService.getProfileMedia(username, page);
+      const { user, media, currentPage, totalPages } = await tweetService.getProfileMedia(username, page, formatTweetText, null, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
       console.log('Media data for profile_media.ejs:', media);
@@ -95,7 +102,9 @@ const webController = {
           currentPage,
           totalPages,
           allAccounts,
-          favoriteAccounts
+          favoriteAccounts,
+          isLoggedIn: !!req.session.userId,
+          username: req.session.username
         });
       } else {
         fileUtils.appendAccountToFile(username);
@@ -111,7 +120,7 @@ const webController = {
     try {
       const username = req.params.username;
       const page = parseInt(req.query.page) || 1;
-      const { user, videos, currentPage, totalPages } = await tweetService.getProfileVideos(username, page);
+      const { user, videos, currentPage, totalPages } = await tweetService.getProfileVideos(username, page, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
 
@@ -128,7 +137,9 @@ const webController = {
           currentPage,
           totalPages,
           allAccounts,
-          favoriteAccounts
+          favoriteAccounts,
+          isLoggedIn: !!req.session.userId,
+          username: req.session.username
         });
       } else {
         fileUtils.appendAccountToFile(username);
@@ -145,7 +156,7 @@ const webController = {
       const username = req.params.username;
       const page = parseInt(req.query.page) || 1;
       const searchQuery = req.query.search || '';
-      const { user, tweets, media, topRetweetedAccounts, topMentionedAccounts, currentPage, totalPages } = await tweetService.getProfileData(username, page, searchQuery);
+      const { user, tweets, media, topRetweetedAccounts, topMentionedAccounts, currentPage, totalPages } = await tweetService.getProfileData(username, page, searchQuery, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
 
@@ -173,7 +184,9 @@ const webController = {
           totalPages,
           allAccounts,
           favoriteAccounts,
-          searchQuery
+          searchQuery,
+          isLoggedIn: !!req.session.userId,
+          username: req.session.username
         });
       } else {
         fileUtils.appendAccountToFile(username);
@@ -188,13 +201,13 @@ const webController = {
   async renderTweetDetail(req, res) {
     try {
       const tweetId = req.params.id;
-      const tweet = await tweetService.getTweetById(tweetId);
+      const tweet = await tweetService.getTweetById(tweetId, formatTweetText, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
 
       if (tweet) {
         // Récupérer d'autres tweets du même compte
-        const { tweets: userTweets } = await tweetService.getTweetsByUsername(tweet.compte, 1, 50); // Prend jusqu'à 50 tweets
+        const { tweets: userTweets } = await tweetService.getTweetsByUsername(tweet.compte, 1, 50, formatTweetText, null, '', req.session.userId); // Prend jusqu'à 50 tweets
         
         // Mélanger et prendre quelques suggestions, en excluant le tweet actuel
         const randomTweets = userTweets
@@ -207,7 +220,9 @@ const webController = {
           formatTweetText, 
           allAccounts, 
           favoriteAccounts, 
-          randomTweets
+          randomTweets,
+          isLoggedIn: !!req.session.userId,
+          username: req.session.username
         });
       } else {
         res.status(404).send('Tweet not found');
@@ -221,12 +236,14 @@ const webController = {
   async renderAllMedia(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const { media, currentPage, totalPages } = await tweetService.getAllMedia(page);
+      const { media, currentPage, totalPages } = await tweetService.getAllMedia(page, req.session.userId);
       
       res.render('all_media', {
         media,
         currentPage,
-        totalPages
+        totalPages,
+        isLoggedIn: !!req.session.userId,
+        username: req.session.username
       });
     } catch (error) {
       console.error('Error rendering all media page:', error);
@@ -248,8 +265,11 @@ const webController = {
 
   async addFavorite(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to like tweets');
+      }
       const tweetId = req.params.id;
-      await tweetService.addFavorite(tweetId);
+      await tweetService.addLike(req.session.userId, tweetId, null);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -260,8 +280,11 @@ const webController = {
 
   async removeFavorite(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to unlike tweets');
+      }
       const tweetId = req.params.id;
-      await tweetService.removeFavorite(tweetId);
+      await tweetService.removeLike(req.session.userId, tweetId, null);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -272,8 +295,11 @@ const webController = {
 
   async addFavoriteAccount(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to like accounts');
+      }
       const username = req.params.username;
-      await accountService.addFavoriteAccount(username);
+      await tweetService.addLike(req.session.userId, null, username);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -284,8 +310,11 @@ const webController = {
 
   async removeFavoriteAccount(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to unlike accounts');
+      }
       const username = req.params.username;
-      await accountService.removeFavoriteAccount(username);
+      await tweetService.removeLike(req.session.userId, null, username);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -296,10 +325,13 @@ const webController = {
 
   async addAllTweetsToFavorites(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to like tweets');
+      }
       const username = req.params.username;
       const { tweets } = await tweetService.getTweetsByUsername(username, 1, 99999); // Get all tweets
       const tweetIds = tweets.map(tweet => tweet.id);
-      await tweetService.addMultipleFavorites(tweetIds);
+      await tweetService.addMultipleLikes(req.session.userId, tweetIds);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -310,10 +342,13 @@ const webController = {
 
   async addAllMediaTweetsToFavorites(req, res) {
     try {
+      if (!req.session.userId) {
+        return res.redirect('/auth/login?error=Please log in to like tweets');
+      }
       const username = req.params.username;
       const { tweets } = await tweetService.getTweetsWithMediaByUsername(username, 1, 99999); // Get all media tweets
       const tweetIds = tweets.map(tweet => tweet.id);
-      await tweetService.addMultipleFavorites(tweetIds);
+      await tweetService.addMultipleLikes(req.session.userId, tweetIds);
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {

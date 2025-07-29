@@ -174,6 +174,16 @@ const tweetController = {
       console.error(`Error getting profile videos for ${req.params.username}:`, error);
       res.status(500).json({ error: 'Error fetching profile videos' });
     }
+  },
+
+  async createTweet(req, res) {
+    try {
+      const tweet = await tweetService.createTweet(req.body);
+      res.status(201).json(tweet);
+    } catch (error) {
+      console.error('Error in createTweet:', error);
+      res.status(500).json({ error: 'Error creating tweet' });
+    }
   }
 };
 

@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts, isLoggedIn: isLoggedIn }) %>
         <div class="main-content">
             <h1>Media from <%= user.username %></h1>
             <p><a href="/profile/<%= user.username %>">Return to Profile</a></p>

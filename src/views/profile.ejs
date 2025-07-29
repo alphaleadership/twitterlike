@@ -13,12 +13,14 @@
         <div class="main-content">
             <h1><%= user.username %>'s Profile</h1>
             <p><a href="/">Return to Homepage</a></p>
-            <form action="/add_all_tweets_to_favorites/<%= user.username %>" method="post" style="display: inline;">
-                <button type="submit">Add All Tweets to Favorites</button>
-            </form>
-            <form action="/add_all_media_tweets_to_favorites/<%= user.username %>" method="post" style="display: inline;">
-                <button type="submit">Add All Media Tweets to Favorites</button>
-            </form>
+            <% if (isLoggedIn) { %>
+                <form action="/like-all-tweets/<%= user.username %>" method="post" style="display: inline;">
+                    <button type="submit">Like All Tweets</button>
+                </form>
+                <form action="/like-all-media-tweets/<%= user.username %>" method="post" style="display: inline;">
+                    <button type="submit">Like All Media Tweets</button>
+                </form>
+            <% } %>
             <p>Total Tweets: <%= tweets.length %></p>
             <div class="profile-nav">
                 <a href="/profile/<%= user.username %>">Tweets</a>
@@ -36,7 +38,7 @@
                 </form>
             </div>
             <div id="tweetListContainer">
-                <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText }) %>
+                <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
             </div>
             <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages }) %>
         </div>

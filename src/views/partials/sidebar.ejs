@@ -1,8 +1,15 @@
 <div class="sidebar">
     <h2>Mentioned Accounts</h2>
     <ul class="sidebar-menu">
-        <li><a href="/favorite_accounts_tweets">Favorite Accounts Tweets</a></li>
-        <li><a href="/favorites">Favorite Tweets</a></li>
+        <li><a href="/favorite_accounts_tweets">Liked Accounts Tweets</a></li>
+        <li><a href="/favorites">Liked Tweets</a></li>
+        <li><a href="/admin/login">Admin Panel</a></li>
+        <% if (isLoggedIn) { %>
+            <li>Welcome, <%= username %>!</li>
+            <li><form action="/auth/logout" method="post" style="display: inline;"><button type="submit">Logout</button></form></li>
+        <% } else { %>
+            <li><a href="/auth/login">Login</a></li>
+        <% } %>
     </ul>
     <form action="/" method="get">
         <input type="text" name="search" placeholder="Search for accounts.." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4a5568; background-color: #2d3748; color: #e2e8f0;">
@@ -21,14 +28,16 @@
                     <img src="/public/images/profiles/<%= item.account %>.png" alt="NF" class="profile-pic" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
                     <a href="/profile/<%= item.account %>"><%= item.account %> (<%= item.count %>)</a>
                 </div>
-                <% if (favoriteAccounts.includes(item.account)) { %>
-                    <form action="/unfavorite_account/<%= item.account %>" method="post" style="display: inline;">
-                        <button type="submit" class="favorite-btn unfavorite">★</button>
-                    </form>
-                <% } else { %>
-                    <form action="/favorite_account/<%= item.account %>" method="post" style="display: inline;">
-                        <button type="submit" class="favorite-btn">☆</button>
-                    </form>
+                <% if (isLoggedIn) { %>
+                    <% if (favoriteAccounts.includes(item.account)) { %>
+                        <form action="/unlike-account/<%= item.account %>" method="post" style="display: inline;">
+                            <button type="submit" class="favorite-btn unfavorite">★</button>
+                        </form>
+                    <% } else { %>
+                        <form action="/like-account/<%= item.account %>" method="post" style="display: inline;">
+                            <button type="submit" class="favorite-btn">☆</button>
+                        </form>
+                    <% } %>
                 <% } %>
                 <form action="/hide/<%= item.account %>" method="post" style="display: inline;">
                     <button type="submit" class="hide-btn">Hide</button>

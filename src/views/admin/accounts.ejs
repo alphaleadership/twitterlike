@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Accounts</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Accounts</h1>
+        <a href="/admin">Back to Dashboard</a>
+        <% if (allAccounts.length > 0) { %>
+            <ul>
+                <% allAccounts.forEach(account => { %>
+                    <li>
+                        <%= account.account %> (<%= account.count %> tweets)
+                        <% if (hiddenAccounts.includes(account.account)) { %>
+                            <form action="/admin/accounts/unhide/<%= account.account %>" method="post" style="display: inline;">
+                                <button type="submit">Unhide</button>
+                            </form>
+                        <% } else { %>
+                            <form action="/admin/accounts/hide/<%= account.account %>" method="post" style="display: inline;">
+                                <button type="submit">Hide</button>
+                            </form>
+                        <% } %>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No accounts found.</p>
+        <% } %>
+    </div>
+</body>
+</html>

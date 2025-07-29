@@ -12,7 +12,7 @@
         <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
         <div class="main-content">
             <h1>Tweet by <%= tweet.compte %></h1>
-            <%- include('partials/tweetCard', { tweet: tweet, formatTweetText: formatTweetText }) %>
+            <%- include('partials/tweetCard', { tweet: tweet, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
             <div class="tweet-actions">
                 <a href="https://twitter.com/<%= tweet.compte %>/status/<%= tweet.id %>" target="_blank" class="view-on-twitter-btn">View on Twitter</a>
                 <a href="/profile/<%= tweet.compte %>" class="return-to-profile-btn">Return to Profile</a>
@@ -20,7 +20,7 @@
 
             <div class="random-tweets-section">
                 <h2>Autres tweets</h2>
-                <%- include('partials/tweetList', { tweets: randomTweets, formatTweetText: formatTweetText }) %>
+                <%- include('partials/tweetList', { tweets: randomTweets, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
             </div>
         </div>
     </div>

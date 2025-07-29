@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Users</h1>
+        <a href="/admin">Back to Dashboard</a> | <a href="/admin/users/add">Add New User</a>
+        <% if (users.length > 0) { %>
+            <ul>
+                <% users.forEach(user => { %>
+                    <li>
+                        <%= user.username %>
+                        <a href="/admin/users/edit/<%= user._id %>">Edit</a>
+                        <form action="/admin/users/delete/<%= user._id %>" method="post" style="display: inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No users found.</p>
+        <% } %>
+    </div>
+</body>
+</html>

@@ -1,29 +1,3 @@
 <% tweets.forEach(tweet => { %>
-    <div class="tweet-card">
-        <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> </p>
-        <p><%- formatTweetText(tweet.texte) %></p>
-        <% if (tweet.allMedia && tweet.allMedia.length > 0) { %>
-            <div class="tweet-media">
-                <% tweet.allMedia.forEach(media => { %>
-                    <% if (media.type === 'photo') { %>
-                        <img src="<%= media.lien %>" alt="Tweet Media">
-                    <% } else if (media.type === 'video') { %>
-                        <video controls src="<%= media.lien %>"></video>
-                    <% } %>
-                <% }); %>
-            </div>
-        <% } %>
-        <div class="tweet-actions">
-            <form action="/favorite/<%= tweet.id %>" method="post" style="display: inline;">
-                <button type="submit"><%= tweet.isFavorite ? 'Unfavorite' : 'Favorite' %></button>
-            </form>
-            <form action="/hide/<%= tweet.compte %>" method="post" style="display: inline;">
-                <button type="submit">Hide Account</button>
-            </form>
-            <form action="<%= tweet.isFavoriteAccount ? '/unfavorite_account/' : '/favorite_account/' %><%= tweet.compte %>" method="post" style="display: inline;">
-                <button type="submit"><%= tweet.isFavoriteAccount ? 'Unfavorite Account' : 'Favorite Account' %></button>
-            </form>
-            <a href="/tweet/<%= tweet.id %>" target="_blank" rel="noopener noreferrer">View Tweet</a>
-        </div>
-    </div>
+    <%- include('tweetCard', { tweet: tweet, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
 <% }); %>

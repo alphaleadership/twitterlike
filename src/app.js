@@ -2,8 +2,12 @@ const express = require('express');
 const path = require('path');
 const { connectToMongo } = require('./config/db');
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
 const webRoutes = require('./routes/web');
+const adminRoutes = require('./routes/admin');
 const errorHandler = require('./middleware/errorHandler');
+const Admin = require('./models/Admin'); // Import Admin model
+require('dotenv').config(); // Load environment variables
 
 // Initialize Express app
 const app = express();
@@ -71,6 +75,8 @@ app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Web Routes (for EJS rendering) - MUST come before SPA fallback
 app.use('/', webRoutes);
+app.use('/admin', adminRoutes);
+app.use('/auth', authRoutes);
 
 // Serve static files from the dist directory for the SPA (if still used)
 app.use(express.static(path.join(__dirname, '../dist')));
@@ -92,6 +98,25 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
   try {
     await connectToMongo();
+
+    // Check if admin collection is empty and create owner account if needed
+    console.log('Checking for existing admin accounts...');
+    const adminCount = await Admin.countDocuments();
+    console.log(`Found ${adminCount} admin accounts.`);
+    if (adminCount === 0 && process.env.OWNER_USERNAME && process.env.OWNER_PASSWORD) {
+      console.log('No admin accounts found. Attempting to create default owner admin account...');
+      const ownerAdmin = new Admin({
+        username: process.env.OWNER_USERNAME,
+        password: process.env.OWNER_PASSWORD
+      });
+      await ownerAdmin.save();
+      console.log('Default owner admin account created successfully.');
+    } else if (adminCount > 0) {
+      console.log('Admin accounts already exist. Skipping default owner account creation.');
+    } else {
+      console.log('OWNER_USERNAME or OWNER_PASSWORD environment variables are not set. Skipping default owner account creation.');
+    }
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
