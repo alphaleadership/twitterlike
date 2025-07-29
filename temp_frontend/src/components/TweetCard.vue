@@ -17,7 +17,7 @@
       <div class="actions">
         <button>Reply</button>
         <button>Retweet</button>
-        <button>Like</button>
+        <button @click="likeTweet" :class="{ liked: tweet.isLiked }">Like</button>
       </div>
     </div>
   </div>
@@ -30,6 +30,20 @@ export default {
     tweet: {
       type: Object,
       required: true,
+    },
+  },
+  methods: {
+    async likeTweet() {
+      try {
+        if (this.tweet.isLiked) {
+          await this.$http.post(`/api/unfavorite/${this.tweet.id}`);
+        } else {
+          await this.$http.post(`/api/favorite/${this.tweet.id}`);
+        }
+        this.tweet.isLiked = !this.tweet.isLiked;
+      } catch (error) {
+        console.error('Error liking tweet:', error);
+      }
     },
   },
 };
@@ -88,5 +102,9 @@ export default {
 .dark-mode .tweet-card .actions button,
 .dark-mode .tweet-card .tweet-text {
   color: #cbd5e0;
+}
+
+.actions button.liked {
+  color: red;
 }
 </style>

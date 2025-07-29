@@ -13,6 +13,9 @@
         <li v-for="account in favoriteAccounts" :key="account">
           <router-link :to="`/profile/${account}`">{{ account }}</router-link>
         </li>
+        <li>
+          <router-link to="/favorite_accounts/media">Favorite Accounts Media</router-link>
+        </li>
       </ul>
       <h4>Hidden Accounts</h4>
       <ul>

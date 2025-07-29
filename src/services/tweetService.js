@@ -126,6 +126,13 @@ class TweetService {
       const hiddenAccounts = getHiddenAccounts();
       const hiddenTweets = getHiddenTweets();
       const filteredResults = allResults.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
+
+      // Trier les résultats par date (du plus récent au plus ancien)
+      filteredResults.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
@@ -166,7 +173,7 @@ class TweetService {
     }
   }
 
-  async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '', userId = null) {
+  async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '', userId) {
     try {
       let allTweets = await this.getAllTweets(true, userId);
 
@@ -177,8 +184,13 @@ class TweetService {
 
       const startIndex = (page - 1) * this.tweetsPerPage;
       const endIndex = startIndex + this.tweetsPerPage;
-      
-      const shuffledTweets = [...allTweets].sort(() => Math.random() - 0.5);
+
+      // Trier les tweets par date (du plus récent au plus ancien)
+      allTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       
       const hiddenAccounts = getHiddenAccounts();
       let userLikedAccounts = [];
@@ -197,7 +209,7 @@ class TweetService {
         .sort((a, b) => b.count - a.count)
 
       return {
-        tweets: shuffledTweets.slice(startIndex, endIndex),
+        tweets: allTweets.slice(startIndex, endIndex),
         currentPage: page,
         totalPages: Math.ceil(allTweets.length / this.tweetsPerPage),
         allAccounts: sortedAccounts,
@@ -238,7 +250,11 @@ class TweetService {
         (tweet.video && tweet.video.length > 0)
       );
       
-      mediaTweets.sort((a, b) => new Date(b.date) - new Date(a.date));
+      mediaTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       
       const startIndex = (page - 1) * this.mediaPerPage;
       const endIndex = startIndex + this.mediaPerPage;
@@ -264,7 +280,11 @@ class TweetService {
         tweet.video && tweet.video.length > 0
       );
       
-      videoTweets.sort((a, b) => new Date(b.date) - new Date(a.date));
+      videoTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       
       const startIndex = (page - 1) * this.videosPerPage;
       const endIndex = startIndex + this.videosPerPage;
@@ -300,7 +320,13 @@ class TweetService {
       const allTweets = await this.getAllTweets(false, userId); // Do not filter hidden accounts here
       const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       let favoriteAccountTweets = allTweets.filter(tweet => favoriteAccounts.includes(tweet.compte));
-      favoriteAccountTweets = favoriteAccountTweets.sort(() => Math.random() - 0.5); // Randomize the tweets
+      
+      // Trier les tweets par date (du plus récent au plus ancien)
+      favoriteAccountTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       const uniqueAccounts = allTweets.map(tweet => tweet.compte).filter((value, index, self) => self.indexOf(value) === index).sort()
       .map(account => ({
         account,
@@ -566,6 +592,39 @@ class TweetService {
       return newTweet;
     } catch (error) {
       console.error('Error creating tweet:', error);
+      throw error;
+    }
+  }
+
+  async getFavoriteAccountsMedia(userId, page = 1) {
+    try {
+      const allTweets = await this.getAllTweets(false, userId); // Do not filter hidden accounts here
+      const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      let favoriteAccountTweets = allTweets.filter(tweet => favoriteAccounts.includes(tweet.compte));
+
+      const mediaTweets = favoriteAccountTweets.filter(tweet => 
+        (tweet.media && tweet.media.length > 0) || 
+        (tweet.video && tweet.video.length > 0)
+      );
+
+      mediaTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
+
+      const startIndex = (page - 1) * this.mediaPerPage;
+      const endIndex = startIndex + this.mediaPerPage;
+      const paginatedTweets = mediaTweets.slice(startIndex, endIndex);
+
+      return {
+        tweets: paginatedTweets,
+        currentPage: page,
+        totalPages: Math.ceil(mediaTweets.length / this.mediaPerPage),
+        totalMedia: mediaTweets.length
+      };
+    } catch (error) {
+      console.error('Error getting favorite accounts media:', error);
       throw error;
     }
   }

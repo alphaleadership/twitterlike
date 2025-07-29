@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favorite Accounts Media</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/sidebar') %>
+
+    <div class="main-content">
+        <h1>Media from Favorite Accounts</h1>
+
+        <div class="media-grid">
+            <% if (media && media.length > 0) { %>
+                <% media.forEach(tweet => { %>
+                    <div class="media-item">
+                        <% if (tweet.media && tweet.media.length > 0) { %>
+                            <img src="<%= tweet.media[0].url %>" alt="Tweet media" class="tweet-image">
+                        <% } else if (tweet.video && tweet.video.length > 0) { %>
+                            <video src="<%= tweet.video[0].url %>" controls class="tweet-video"></video>
+                        <% } %>
+                        <p class="tweet-text"><%- formatTweetText(tweet.texte) %></p>
+                        <a href="/profile/<%= tweet.compte %>" class="username">@<%= tweet.compte %></a>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p>No media found from favorite accounts.</p>
+            <% } %>
+        </div>
+
+        <%- include('partials/pagination') %>
+    </div>
+</body>
+</html>

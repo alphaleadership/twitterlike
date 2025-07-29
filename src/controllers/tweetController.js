@@ -6,7 +6,8 @@ const tweetController = {
   async getTweets(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getPaginatedTweets(page);
+      const userId = req.user ? req.user.id : null; // Assuming req.user is populated by authentication middleware
+      const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getPaginatedTweets(page, null, null, userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const favoriteAccounts = (await accountService.getAccounts()).favorites;
       
@@ -183,6 +184,23 @@ const tweetController = {
     } catch (error) {
       console.error('Error in createTweet:', error);
       res.status(500).json({ error: 'Error creating tweet' });
+    }
+  },
+
+  async getFavoriteAccountsMedia(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const userId = req.user ? req.user.id : null;
+      const { tweets, currentPage, totalPages, totalMedia } = await tweetService.getFavoriteAccountsMedia(userId, page);
+      res.json({
+        tweets,
+        currentPage,
+        totalPages,
+        totalMedia
+      });
+    } catch (error) {
+      console.error('Error in getFavoriteAccountsMedia:', error);
+      res.status(500).json({ error: 'Error fetching favorite accounts media' });
     }
   }
 };
