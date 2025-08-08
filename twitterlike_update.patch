@@ -1,0 +1,132 @@
+
+diff --git a/package.json b/package.json
+new file mode 100644
+--- /dev/null
++++ b/package.json
+@@
++{
++  "name": "twitterlike",
++  "version": "1.0.0",
++  "description": "Application type Twitter en Node.js + EJS avec sécurité renforcée",
++  "main": "server.js",
++  "scripts": {
++    "start": "node server.js",
++    "dev": "nodemon server.js",
++    "lint": "eslint ."
++  },
++  "keywords": ["twitter", "nodejs", "express", "ejs"],
++  "author": "",
++  "license": "MIT",
++  "dependencies": {
++    "bcrypt": "^5.1.1",
++    "compression": "^1.7.4",
++    "dotenv": "^16.4.1",
++    "ejs": "^3.1.9",
++    "express": "^4.19.2",
++    "express-rate-limit": "^7.1.5",
++    "helmet": "^7.1.0",
++    "morgan": "^1.10.0",
++    "validator": "^13.11.0"
++  },
++  "devDependencies": {
++    "eslint": "^8.57.0",
++    "nodemon": "^3.1.0"
++  }
++}
+diff --git a/.env.example b/.env.example
+new file mode 100644
+--- /dev/null
++++ b/.env.example
+@@
++# Port sur lequel l'application écoute
++PORT=3000
++
++# URL de connexion à la base de données
++DB_URL=mongodb://localhost:27017/twitterlike
++
++# Clé secrète pour les sessions (changer en production !)
++SESSION_SECRET=remplacez_ici_par_une_cle_secrete_solide
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@
++# TwitterLike
++
++Une application type Twitter développée en **Node.js + Express + EJS** avec une sécurité renforcée.
++
++## 🚀 Installation
++
++1. **Cloner le dépôt**
++   ```bash
++   git clone https://github.com/toncompte/twitterlike.git
++   cd twitterlike
++   ```
++
++2. **Installer les dépendances**
++   ```bash
++   npm install
++   ```
++
++3. **Configurer les variables d’environnement**
++   - Copier le fichier `.env.example` en `.env`
++   - Modifier les valeurs selon votre environnement
++   ```bash
++   cp .env.example .env
++   ```
++
++4. **Lancer l’application**
++   - En développement :
++     ```bash
++     npm run dev
++     ```
++   - En production :
++     ```bash
++     npm start
++     ```
++
++## ⚙️ Variables d’environnement
++
++| Nom              | Description                                         |
++|------------------|-----------------------------------------------------|
++| `PORT`           | Port HTTP de l'application                          |
++| `DB_URL`         | URL de connexion MongoDB                            |
++| `SESSION_SECRET` | Clé secrète pour signer les sessions (changer !)    |
++
++## 🔒 Sécurité intégrée
++
++- **[Helmet](https://www.npmjs.com/package/helmet)** : sécurisation des en-têtes HTTP
++- **[express-rate-limit](https://www.npmjs.com/package/express-rate-limit)** : limitation des requêtes abusives
++- **[bcrypt](https://www.npmjs.com/package/bcrypt)** : hashage des mots de passe
++- **[validator](https://www.npmjs.com/package/validator)** : validation et nettoyage des entrées utilisateurs
++- **[morgan](https://www.npmjs.com/package/morgan)** : logs HTTP
++- **[compression](https://www.npmjs.com/package/compression)** : compression GZIP des réponses
++
++## 📂 Structure
++
++```
++.
++├── server.js
++├── package.json
++├── .env.example
++├── README.md
++├── /views
++│   ├── layout.ejs
++│   ├── index.ejs
++│   ├── login.ejs
++│   └── register.ejs
++└── /public
++    └── /css
++        └── style.css
++```
++
++## 🛡️ Bonnes pratiques
++
++- **Ne jamais** commiter le fichier `.env` dans Git.
++- Utiliser un mot de passe fort pour `SESSION_SECRET`.
++- En production, activer HTTPS.
++- Mettre à jour régulièrement les dépendances (`npm outdated` / `npm update`).
++
++## 📜 Licence
++
++Ce projet est sous licence [MIT](LICENSE).
