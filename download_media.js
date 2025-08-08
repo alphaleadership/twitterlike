@@ -25,6 +25,13 @@ const downloadMedia = (mediaItem) => {
         const fileName = path.basename(new URL(mediaUrl).pathname);
         const localPath = path.join(MEDIA_DIR, fileName);
 
+        // Vérifier si le fichier existe déjà
+        if (fs.existsSync(localPath)) {
+            console.log(`File already exists: ${fileName}, skipping download`);
+            mediaItem.lien = `/images/tweet_media/${fileName}`;
+            return resolve();
+        }
+
         const fileStream = fs.createWriteStream(localPath);
 
         https.get(mediaUrl, (response) => {
