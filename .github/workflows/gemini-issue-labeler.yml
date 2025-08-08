@@ -12,11 +12,15 @@ jobs:
       contents: read
     steps:
       - name: Get issue data
+        id: issue_data
         run: |
-          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
-          echo "ISSUE_BODY=${{ github.event.issue.body }}" >> $GITHUB_ENV
-          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
-
+          echo "title=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+          echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          # EOF marker is used to correctly handle multiline strings
+          echo 'body<<EOF' >> $GITHUB_OUTPUT
+          echo "${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+        
       - name: Get available labels
         id: get_labels
         run: |
@@ -27,11 +31,13 @@ jobs:
         id: gemini_call
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ steps.issue_data.outputs.title }}
+          ISSUE_BODY: ${{ steps.issue_data.outputs.body }}
         run: |
-          JSON_PAYLOAD=$(jq -n --arg title "$ISSUE_TITLE" --arg body "$ISSUE_BODY" --arg labels "${{ steps.get_labels.outputs.labels }}" \
+          JSON_PAYLOAD=$(jq -n --arg title "$ISSUE_TITLE" --arg body "$ISSUE_BODY" --arg labels "${{ steps.get_labels.outputs.labels }}" 
             '{ "contents": [{ "parts": [{ "text": "Read the following GitHub issue and suggest up to 3 relevant labels from the available list. Only return a comma-separated list of the most appropriate labels. Do not add any other text or explanation.\n\nAvailable Labels: \($labels)\n\nIssue Title: \($title)\n\nIssue Body: \n\($body)" }]}]}')
 
-          API_RESPONSE=$(curl -s -H "Content-Type: application/json" -d "$JSON_PAYLOAD" \
+          API_RESPONSE=$(curl -s -H "Content-Type: application/json" -d "$JSON_PAYLOAD" 
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$GEMINI_API_KEY")
 
           SUGGESTED_LABELS=$(echo "$API_RESPONSE" | jq -r '.candidates[0].content.parts[0].text' | tr -d '\n' | xargs)
@@ -43,5 +49,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.issue_data.outputs.number }}
         run: |
-          gh issue edit ${{ env.ISSUE_NUMBER }} --add-label "${{ steps.gemini_call.outputs.suggested_labels }}"
+          gh issue edit $ISSUE_NUMBER --add-label "${{ steps.gemini_call.outputs.suggested_labels }}"
