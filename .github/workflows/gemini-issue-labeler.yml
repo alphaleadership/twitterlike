@@ -1,0 +1,47 @@
+name: Gemini Issue Labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Get issue data
+        run: |
+          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
+          echo "ISSUE_BODY=${{ github.event.issue.body }}" >> $GITHUB_ENV
+          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
+
+      - name: Get available labels
+        id: get_labels
+        run: |
+          # These labels are examples. You can get them from the repo if you have a file for them.
+          echo "labels=bug,feature,documentation,question,enhancement,help wanted" >> $GITHUB_OUTPUT
+
+      - name: Call Gemini to suggest labels
+        id: gemini_call
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          JSON_PAYLOAD=$(jq -n --arg title "$ISSUE_TITLE" --arg body "$ISSUE_BODY" --arg labels "${{ steps.get_labels.outputs.labels }}" \
+            '{ "contents": [{ "parts": [{ "text": "Read the following GitHub issue and suggest up to 3 relevant labels from the available list. Only return a comma-separated list of the most appropriate labels. Do not add any other text or explanation.\n\nAvailable Labels: \($labels)\n\nIssue Title: \($title)\n\nIssue Body: \n\($body)" }]}]}')
+
+          API_RESPONSE=$(curl -s -H "Content-Type: application/json" -d "$JSON_PAYLOAD" \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$GEMINI_API_KEY")
+
+          SUGGESTED_LABELS=$(echo "$API_RESPONSE" | jq -r '.candidates[0].content.parts[0].text' | tr -d '\n' | xargs)
+          
+          echo "suggested_labels=$SUGGESTED_LABELS" >> $GITHUB_ENV
+
+      - name: Add labels to the issue with gh CLI
+        if: steps.gemini_call.outputs.suggested_labels != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue edit ${{ env.ISSUE_NUMBER }} --add-label "${{ steps.gemini_call.outputs.suggested_labels }}"
