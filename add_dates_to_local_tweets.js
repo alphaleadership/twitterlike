@@ -7,8 +7,8 @@ const metascraper = require('metascraper')([require('metascraper-date')()]);
 // 1. Assurez-vous d'avoir un fichier .env à la racine du projet avec votre clé API :
 //    BROWSERLESS_API_KEY=VOTRE_CLE_API
 // 2. Remplacez cette variable par le chemin d'accès correct vers votre fichier JSON de tweets.
-const TWEET_INPUT_FILE_PATH = './tweet.json'; 
-const TWEET_OUTPUT_FILE_PATH = './tweets_with_dates.json';
+const TWEET_INPUT_FILE_PATH = './tweets_no_dates.json'; 
+const TWEET_OUTPUT_FILE_PATH = '../tweets.json';
 
 const getHTML = require('html-get')
 
