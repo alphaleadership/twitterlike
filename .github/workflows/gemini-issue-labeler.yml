@@ -1,107 +1,188 @@
-name: Gemini Issue Labeler
+name: Gemini Issue Assistant
 
 on:
-  issues
+  issues:
+    types: [opened]
 
 jobs:
-  label-issue:
+  assist:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-      contents: read # Needed to read workflow file
+      contents: write # Required to create branches and PRs
     steps:
-      - name: Label issue with Gemini
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history to create branches
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Gemini Issue Analysis
+        id: gemini_analysis
         uses: actions/github-script@v7
         with:
           script: |
             const https = require('https');
+            const { execSync } = require('child_process');
 
-            async function getSuggestions() {
-              const issueTitle = context.payload.issue.title;
-              const issueBody = context.payload.issue.body;
-              const availableLabels = "bug,feature,documentation,question,enhancement,help wanted";
-
-              // New, more detailed prompt
-              const prompt = `Analyze the following GitHub issue. Provide your response in a structured format with two sections separated by '###': LABELS and COMMENT.\n\n### LABELS\nSuggest up to 3 relevant labels from the available list, comma-separated. Available labels: ${availableLabels}\n\n### COMMENT\nSummarize the issue in one sentence. Then, based on the issue description, suggest up to 3 potentially relevant files to investigate from the project structure. Add a brief explanation for each file suggestion.\n\n---\n\nIssue Title: ${issueTitle}\n\nIssue Body:\n${issueBody}`;
-              
+            // Function to call Gemini API
+            async function callGemini(prompt) {
               const apiKey = process.env.GEMINI_API_KEY;
               if (!apiKey) {
                 core.setFailed("GEMINI_API_KEY secret is not set.");
                 return null;
               }
-
-              const data = JSON.stringify({
-                contents: [{ 
-                  parts: [{ text: prompt }]
-                }]
-              });
-
+              const data = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
               const options = {
                 hostname: 'generativelanguage.googleapis.com',
                 path: `/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
               };
-
               return new Promise((resolve, reject) => {
-                const req = https.request(options, (res) => {
-                  let responseBody = '';
-                  res.on('data', (chunk) => { responseBody += chunk; });
+                const req = https.request(options, res => {
+                  let body = '';
+                  res.on('data', chunk => body += chunk);
                   res.on('end', () => {
+                    if (res.statusCode !== 200) {
+                      return reject(new Error(`API request failed with status ${res.statusCode}: ${body}`));
+                    }
                     try {
-                      if (res.statusCode !== 200) {
-                        return reject(new Error(`API request failed with status ${res.statusCode}: ${responseBody}`));
-                      }
-                      const response = JSON.parse(responseBody);
-                      if (response.candidates && response.candidates[0].content.parts[0].text) {
-                        resolve(response.candidates[0].content.parts[0].text);
-                      } else {
-                        core.warning(`Unexpected Gemini API response: ${responseBody}`);
-                        resolve('');
-                      }
+                      const response = JSON.parse(body);
+                      resolve(response.candidates[0].content.parts[0].text);
                     } catch (e) {
                       reject(new Error(`Failed to parse Gemini API response: ${e.message}`));
                     }
                   });
                 });
-                req.on('error', (e) => reject(new Error(`API request failed: ${e.message}`)));
+                req.on('error', e => reject(new Error(`API request failed: ${e.message}`)));
                 req.write(data);
                 req.end();
               });
             }
 
-            try {
-              const geminiResponse = await getSuggestions();
-              if (geminiResponse) {
-                const parts = geminiResponse.split('###');
-                const labelsPart = parts.find(p => p.trim().startsWith('LABELS'))?.replace('LABELS', '').trim();
-                const commentPart = parts.find(p => p.trim().startsWith('COMMENT'))?.replace('COMMENT', '').trim();
+            // 1. Initial Analysis for Labels and Files
+            const issue = context.payload.issue;
+            const all_files = execSync('git ls-files').toString().split('\n');
+            const file_list = all_files.slice(0, 100).join('\n'); // Limit file list size for the prompt
 
-                if (labelsPart) {
-                  const labelsToAdd = labelsPart.split(',').map(l => l.trim()).filter(Boolean);
-                  if (labelsToAdd.length > 0) {
-                    await github.rest.issues.addLabels({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      issue_number: context.issue.number,
-                      labels: labelsToAdd
-                    });
-                    core.info(`Added labels: ${labelsToAdd.join(', ')}`);
-                  }
-                }
+            const analysisPrompt = `
+            Analyze the GitHub issue below.
+            Respond in two parts separated by '###'.
 
-                if (commentPart) {
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: context.issue.number,
-                    body: `**Gemini Suggestions**\n\n${commentPart}`
-                  });
-                  core.info("Added comment with suggestions.");
-                }
+            ### FILES
+            List up to 3 relevant file paths from the following list that might need changes. Do not suggest files not in the list.
+            File list:
+            ${file_list}
+
+            ### LABELS
+            Suggest up to 3 relevant labels from: bug, feature, documentation, question, enhancement.
+
+            Issue Title: ${issue.title}
+            Issue Body:
+            ${issue.body}
+            `;
+
+            const analysisResponse = await callGemini(analysisPrompt);
+            const filesToRead = analysisResponse.split('###')[1].replace('FILES', '').trim().split('\n').filter(Boolean);
+            const labels = analysisResponse.split('###')[2].replace('LABELS', '').trim();
+
+            // Output labels for the next step
+            core.setOutput('labels', labels);
+
+            // 2. Generate Patch
+            let fileContents = '';
+            for (const file of filesToRead) {
+              try {
+                const content = require('fs').readFileSync(file, 'utf8');
+                fileContents += `--- ${file} ---\n${content}\n\n`;
+              } catch (e) {
+                core.warning(`Could not read file: ${file}`);
               }
-            } catch (error) {
-              core.setFailed(`Action failed: ${error.message}`);
             }
+
+            if (!fileContents) {
+              core.info("No relevant files found or read. Skipping patch generation.");
+              core.setOutput('patch_created', 'false');
+              return;
+            }
+
+            const patchPrompt = `
+            Based on the issue below and the content of the relevant files, generate a code patch in the standard .diff format.
+            The patch should only contain the changes for the files provided.
+
+            Issue Title: ${issue.title}
+            Issue Body:
+            ${issue.body}
+
+            File Contents:
+            ${fileContents}
+            `;
+
+            const patch = await callGemini(patchPrompt);
+            const cleanedPatch = patch.replace(/```diff|```/g, '').trim();
+            
+            core.setOutput('patch', cleanedPatch);
+            core.setOutput('patch_created', 'true');
+            core.setOutput('branch_name', 
+x`gemini-fix-issue-${issue.number}
+x`);
+            core.setOutput('pr_title', 
+x`[Gemini] Attempted fix for #${issue.number}: ${issue.title}
+x`);
+            core.setOutput('pr_body', 
+x`This PR was automatically generated by Gemini to address issue #${issue.number}.
+
+**Summary of Changes:**
+* Applies a patch generated by AI.
+
+**Warning:** This is an experimental feature. Please review the changes carefully before merging.
+x`);
+
+      - name: Apply Labels
+        if: steps.gemini_analysis.outputs.labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = "${{ steps.gemini_analysis.outputs.labels }}".split(',').map(l => l.trim()).filter(Boolean);
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labels
+              });
+            }
+
+      - name: Create and Push Patch Branch
+        if: steps.gemini_analysis.outputs.patch_created == 'true'
+        run: |
+          BRANCH_NAME="${{ steps.gemini_analysis.outputs.branch_name }}"
+          echo "${{ steps.gemini_analysis.outputs.patch }}" > fix.patch
+          
+          git checkout -b $BRANCH_NAME
+          git apply fix.patch || (core.setFailed("Failed to apply patch."); exit 1)
+          
+          git add .
+          git commit -m "feat: Gemini's attempted fix for #${{ github.event.issue.number }}"
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request
+        if: steps.gemini_analysis.outputs.patch_created == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "${{ steps.gemini_analysis.outputs.pr_title }}",
+              head: "${{ steps.gemini_analysis.outputs.branch_name }}",
+              base: 'main', # Or your default branch
+              body: "${{ steps.gemini_analysis.outputs.pr_body }}"
+            });
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
