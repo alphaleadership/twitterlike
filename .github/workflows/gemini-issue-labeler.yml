@@ -16,12 +16,13 @@ jobs:
           script: |
             const https = require('https');
 
-            async function getSuggestedLabels() {
+            async function getSuggestions() {
               const issueTitle = context.payload.issue.title;
               const issueBody = context.payload.issue.body;
               const availableLabels = "bug,feature,documentation,question,enhancement,help wanted";
 
-              const prompt = `Read the following GitHub issue and suggest up to 3 relevant labels from the available list. Only return a comma-separated list of the most appropriate labels. Do not add any other text or explanation.\n\nAvailable Labels: ${availableLabels}\n\nIssue Title: ${issueTitle}\n\nIssue Body: \n${issueBody}`;
+              // New, more detailed prompt
+              const prompt = `Analyze the following GitHub issue. Provide your response in a structured format with two sections separated by '###': LABELS and COMMENT.\n\n### LABELS\nSuggest up to 3 relevant labels from the available list, comma-separated. Available labels: ${availableLabels}\n\n### COMMENT\nSummarize the issue in one sentence. Then, based on the issue description, suggest up to 3 potentially relevant files to investigate from the project structure. Add a brief explanation for each file suggestion.\n\n---\n\nIssue Title: ${issueTitle}\n\nIssue Body:\n${issueBody}`;
               
               const apiKey = process.env.GEMINI_API_KEY;
               if (!apiKey) {
@@ -56,7 +57,7 @@ jobs:
                         resolve(response.candidates[0].content.parts[0].text);
                       } else {
                         core.warning(`Unexpected Gemini API response: ${responseBody}`);
-                        resolve(''); // Resolve with empty string if no labels
+                        resolve('');
                       }
                     } catch (e) {
                       reject(new Error(`Failed to parse Gemini API response: ${e.message}`));
@@ -70,20 +71,33 @@ jobs:
             }
 
             try {
-              const suggestedLabelsText = await getSuggestedLabels();
-              if (suggestedLabelsText) {
-                const labelsToAdd = suggestedLabelsText.split(',').map(l => l.trim()).filter(Boolean);
+              const geminiResponse = await getSuggestions();
+              if (geminiResponse) {
+                const parts = geminiResponse.split('###');
+                const labelsPart = parts.find(p => p.trim().startsWith('LABELS'))?.replace('LABELS', '').trim();
+                const commentPart = parts.find(p => p.trim().startsWith('COMMENT'))?.replace('COMMENT', '').trim();
 
-                if (labelsToAdd.length > 0) {
-                  await github.rest.issues.addLabels({
+                if (labelsPart) {
+                  const labelsToAdd = labelsPart.split(',').map(l => l.trim()).filter(Boolean);
+                  if (labelsToAdd.length > 0) {
+                    await github.rest.issues.addLabels({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: context.issue.number,
+                      labels: labelsToAdd
+                    });
+                    core.info(`Added labels: ${labelsToAdd.join(', ')}`);
+                  }
+                }
+
+                if (commentPart) {
+                  await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: context.issue.number,
-                    labels: labelsToAdd
+                    body: `**Gemini Suggestions**\n\n${commentPart}`
                   });
-                  core.info(`Added labels: ${labelsToAdd.join(', ')}`);
-                } else {
-                  core.info("Gemini did not suggest any valid labels.");
+                  core.info("Added comment with suggestions.");
                 }
               }
             } catch (error) {
