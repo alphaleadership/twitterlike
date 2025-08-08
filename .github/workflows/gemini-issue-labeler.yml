@@ -1,8 +1,7 @@
 name: Gemini Issue Labeler
 
 on:
-  issues:
-    types: [opened, edited]
+  issues
 
 jobs:
   label-issue:
