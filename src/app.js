@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const expressLayouts = require('express-ejs-layouts');
 const { connectToMongo } = require('./config/db');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
@@ -19,6 +20,8 @@ const MongoStore = require('connect-mongo');
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layouts/main'); // default layout
 
 // Session middleware
 app.use(session({

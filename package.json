@@ -1,32 +1,40 @@
 {
-  "name": "ui",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "browserless": "^10.7.11",
-    "connect-mongo": "^5.1.0",
-    "dotenv": "^17.2.0",
-    "ejs": "^3.1.10",
-    "express": "^5.1.0",
-    "express-session": "^1.18.2",
-    "html-get": "^2.21.8",
-    "metascraper": "^5.49.1",
-    "metascraper-date": "^5.49.1",
-    "mongodb": "^6.17.0",
-    "mongoose": "^8.17.0",
-    "morgan": "^1.10.1",
-    "node-fetch": "^3.3.2",
-    "puppeteer-core": "^24.15.0",
-    "stream-json": "^1.9.1"
-  }
+      "name": "twitterlike",
+      "version": "1.0.0",
+      "description": "Application type Twitter en Node.js  EJS avec sécurité renforcée",
+      "main": "server.js",
+      "scripts": {
+            "start": "node server.js",
+            "dev": "nodemon server.js",
+            "lint": "eslint ."
+      },
+      "keywords": [
+            "twitter",
+            "nodejs",
+            "express",
+            "ejs"
+      ],
+      "author": "",
+      "license": "MIT",
+      "dependencies": {
+            "bcrypt": "^5.1.1",
+            "bcryptjs": "^3.0.2",
+            "compression": "^1.7.4",
+            "connect-mongo": "^5.1.0",
+            "dotenv": "^16.4.1",
+            "ejs": "^3.1.9",
+            "express": "^5.1.0",
+            "express-ejs-layouts": "^2.5.1",
+            "express-rate-limit": "^7.1.5",
+            "express-session": "^1.18.2",
+            "helmet": "^7.1.0",
+            "mongodb": "^6.18.0",
+            "mongoose": "^8.17.2",
+            "morgan": "^1.10.0",
+            "validator": "^13.11.0"
+      },
+      "devDependencies": {
+            "eslint": "^8.57.0",
+            "nodemon": "^3.1.0"
+      }
 }

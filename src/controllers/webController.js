@@ -136,7 +136,7 @@ const webController = {
           videos,
           currentPage,
           totalPages,
-          allAccounts,
+          sidebarAccounts:allAccounts,
           favoriteAccounts,
           isLoggedIn: !!req.session.userId,
           username: req.session.username
@@ -248,6 +248,26 @@ const webController = {
     } catch (error) {
       console.error('Error rendering all media page:', error);
       res.status(500).send('Error rendering all media page');
+    }
+  },
+
+  async renderVideos(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const { tweets, currentPage, totalPages } = await tweetService.getTweetsWithVideos(page, req.session.userId);
+      const allAccounts = await tweetService.getUniqueAccounts();
+      res.render('videos', {
+        tweets,
+        currentPage,
+        totalPages,
+        formatTweetText,
+        isLoggedIn: !!req.session.userId,
+        username: req.session.username,
+        sidebarAccounts:allAccounts
+      });
+    } catch (error) {
+      console.error('Error rendering videos page:', error);
+      res.status(500).send('Error rendering videos page');
     }
   },
 

@@ -11,17 +11,21 @@
         <h1>Manage Users</h1>
         <a href="/admin">Back to Dashboard</a> | <a href="/admin/users/add">Add New User</a>
         <% if (users.length > 0) { %>
-            <ul>
+            <div class="user-grid">
                 <% users.forEach(user => { %>
-                    <li>
-                        <%= user.username %>
-                        <a href="/admin/users/edit/<%= user._id %>">Edit</a>
-                        <form action="/admin/users/delete/<%= user._id %>" method="post" style="display: inline;">
-                            <button type="submit">Delete</button>
-                        </form>
-                    </li>
+                    <div class="user-item">
+                        <div class="user-info">
+                            <strong><%= user.username %></strong>
+                        </div>
+                        <div class="user-actions">
+                            <a href="/admin/users/edit/<%= user._id %>" class="edit-btn">Edit</a>
+                            <form action="/admin/users/delete/<%= user._id %>" method="post" style="display: inline;">
+                                <button type="submit" class="delete-btn">Delete</button>
+                            </form>
+                        </div>
+                    </div>
                 <% }); %>
-            </ul>
+            </div>
         <% } else { %>
             <p>No users found.</p>
         <% } %>

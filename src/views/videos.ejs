@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videos</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <%- include('partials/sidebar', { activePage: 'videos', allAccounts: [], favoriteAccounts: [] }) %>
+        <div class="main-content">
+            <h1>Videos</h1>
+            <div class="tweet-list">
+                <% tweets.forEach(tweet => { %>
+                    <%- include('partials/tweetCard', { tweet: tweet, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn, username: username }) %>
+                <% }); %>
+            </div>
+            <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/videos' }) %>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const videos = document.querySelectorAll('video');
+            if (videos.length < 2) {
+                return; // Don't do anything if there's 0 or 1 video
+            }
+
+            videos.forEach((video, index) => {
+                video.addEventListener('ended', () => {
+                    const nextVideoIndex = (index + 1) % videos.length; // Loop back to the first video
+                    const nextVideo = videos[nextVideoIndex];
+                    
+                    // Scroll the next video into view
+                    nextVideo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Play the next video
+                    nextVideo.play();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

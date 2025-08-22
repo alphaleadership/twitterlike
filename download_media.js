@@ -28,7 +28,7 @@ const downloadMedia = (mediaItem) => {
         // Vérifier si le fichier existe déjà
         if (fs.existsSync(localPath)) {
             console.log(`File already exists: ${fileName}, skipping download`);
-            mediaItem.lien = `/images/tweet_media/${fileName}`;
+            mediaItem.locallien = `http://localhost:3000/public/images/tweet_media/${fileName}`;
             return resolve();
         }
 
@@ -53,7 +53,7 @@ const downloadMedia = (mediaItem) => {
 
             fileStream.on('finish', () => {
                 fileStream.close(() => {
-                    mediaItem.lien = `/images/tweet_media/${fileName}`;
+                    mediaItem.locallien = `http://localhost:3000/public/images/tweet_media/${fileName}`;
                     console.log(`Downloaded and updated to ${mediaItem.lien}`);
                     resolve();
                 });

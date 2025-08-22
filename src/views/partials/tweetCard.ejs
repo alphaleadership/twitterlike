@@ -24,7 +24,7 @@
         <div class="tweet-media">
             <% tweet.allMedia.forEach(media => { %>
                 <% if (media.type === 'photo') { %>
-                    <img src="<%= media.lien %>" alt="Tweet Media">
+                    <img src="<%= media.locallien %>" alt="Tweet Media">
                 <% } else if (media.type === 'video') { %>
                     <video controls src="<%= media.lien %>"></video>
                 <% } %>
