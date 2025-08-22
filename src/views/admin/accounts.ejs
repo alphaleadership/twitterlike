@@ -10,23 +10,40 @@
     <div class="container">
         <h1>Manage Accounts</h1>
         <a href="/admin">Back to Dashboard</a>
-        <% if (allAccounts.length > 0) { %>
-            <ul>
+
+        <h2 style="margin-top: 20px;">Select an Account</h2>
+        <form action="/admin/accounts/select" method="get">
+            <select name="selectedAccount" id="account-selector" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4a5568; background-color: #2d3748; color: #e2e8f0;">
+                <option value="">-- Select an Account --</option>
                 <% allAccounts.forEach(account => { %>
-                    <li>
-                        <%= account.account %> (<%= account.count %> tweets)
-                        <% if (hiddenAccounts.includes(account.account)) { %>
-                            <form action="/admin/accounts/unhide/<%= account.account %>" method="post" style="display: inline;">
-                                <button type="submit">Unhide</button>
-                            </form>
-                        <% } else { %>
-                            <form action="/admin/accounts/hide/<%= account.account %>" method="post" style="display: inline;">
-                                <button type="submit">Hide</button>
-                            </form>
-                        <% } %>
-                    </li>
+                    <option value="<%= account.account %>"><%= account.account %> (<%= account.count %> tweets)</option>
                 <% }); %>
-            </ul>
+            </select>
+            <button type="submit" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;">Go</button>
+        </form>
+
+        <% if (allAccounts.length > 0) { %>
+            <h2 style="margin-top: 20px;">All Accounts</h2>
+            <div class="account-grid">
+                <% allAccounts.forEach(account => { %>
+                    <div class="account-item">
+                        <div class="account-info">
+                            <strong><%= account.account %></strong> (<%= account.count %> tweets)
+                        </div>
+                        <div class="account-actions">
+                            <% if (hiddenAccounts.includes(account.account)) { %>
+                                <form action="/admin/accounts/unhide/<%= account.account %>" method="post" style="display: inline;">
+                                    <button type="submit" class="unhide-btn">Unhide</button>
+                                </form>
+                            <% } else { %>
+                                <form action="/admin/accounts/hide/<%= account.account %>" method="post" style="display: inline;">
+                                    <button type="submit" class="hide-btn">Hide</button>
+                                </form>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
         <% } else { %>
             <p>No accounts found.</p>
         <% } %>

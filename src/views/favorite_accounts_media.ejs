@@ -17,9 +17,9 @@
                 <% media.forEach(tweet => { %>
                     <div class="media-item">
                         <% if (tweet.media && tweet.media.length > 0) { %>
-                            <img src="<%= tweet.media[0].url %>" alt="Tweet media" class="tweet-image">
+                            <img src="<%= tweet.media[0].locallien %>" alt="Tweet media" class="tweet-image">
                         <% } else if (tweet.video && tweet.video.length > 0) { %>
-                            <video src="<%= tweet.video[0].url %>" controls class="tweet-video"></video>
+                            <video src="<%= tweet.video[0].lien %>" controls class="tweet-video"></video>
                         <% } %>
                         <p class="tweet-text"><%- formatTweetText(tweet.texte) %></p>
                         <a href="/profile/<%= tweet.compte %>" class="username">@<%= tweet.compte %></a>

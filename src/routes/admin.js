@@ -15,6 +15,7 @@ router.get('/', adminAuth, adminController.renderDashboard);
 router.get('/accounts', adminAuth, adminController.renderAccounts);
 router.post('/accounts/unhide/:username', adminAuth, adminController.unhideAccount);
 router.post('/accounts/hide/:username', adminAuth, adminController.hideAccount);
+router.get('/accounts/select', adminAuth, adminController.selectAccount); // New route
 
 // Admin Tweets Management (protected)
 router.get('/tweets', adminAuth, adminController.renderTweets);

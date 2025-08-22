@@ -6,7 +6,7 @@ const User = require('../models/User'); // Import User model
 
 const adminController = {
     renderLogin(req, res) {
-        res.render('admin/login', { error: req.query.error });
+        res.render('admin/login', { title: 'Login', error: req.query.error, layout: false });
     },
 
     async login(req, res) {
@@ -41,14 +41,14 @@ const adminController = {
     },
 
     async renderDashboard(req, res) {
-        res.render('admin/dashboard');
+        res.render('admin/dashboard', { title: 'Dashboard', layout: 'layouts/admin' });
     },
 
     async renderAccounts(req, res) {
         try {
             const allAccounts = await tweetService.getUniqueAccounts();
             const hiddenAccounts = fileUtils.getHiddenAccounts();
-            res.render('admin/accounts', { allAccounts, hiddenAccounts });
+            res.render('admin/accounts', { title: 'Manage Accounts', allAccounts, hiddenAccounts, layout: 'layouts/admin' });
         } catch (error) {
             console.error('Error rendering admin accounts page:', error);
             res.status(500).send('Error loading accounts');
@@ -80,7 +80,7 @@ const adminController = {
     async renderTweets(req, res) {
         try {
             const hiddenTweets = fileUtils.getHiddenTweets();
-            res.render('admin/tweets', { hiddenTweets });
+            res.render('admin/tweets', { title: 'Manage Tweets', hiddenTweets, layout: 'layouts/admin' });
         } catch (error) {
             console.error('Error rendering admin tweets page:', error);
             res.status(500).send('Error loading tweets');
@@ -101,7 +101,7 @@ const adminController = {
     async renderUsers(req, res) {
         try {
             const users = await User.find({});
-            res.render('admin/users/list', { users });
+            res.render('admin/users/list', { title: 'Manage Users', users, layout: 'layouts/admin' });
         } catch (error) {
             console.error('Error rendering users page:', error);
             res.status(500).send('Error loading users');
@@ -109,7 +109,7 @@ const adminController = {
     },
 
     renderAddUser(req, res) {
-        res.render('admin/users/add', { error: null });
+        res.render('admin/users/add', { title: 'Add User', error: null, layout: 'layouts/admin' });
     },
 
     async addUser(req, res) {
@@ -120,7 +120,7 @@ const adminController = {
             res.redirect('/admin/users');
         } catch (error) {
             console.error('Error adding user:', error);
-            res.render('admin/users/add', { error: 'Error adding user. Username might already exist.' });
+            res.render('admin/users/add', { title: 'Add User', error: 'Error adding user. Username might already exist.' });
         }
     },
 
@@ -130,7 +130,7 @@ const adminController = {
             if (!user) {
                 return res.status(404).send('User not found');
             }
-            res.render('admin/users/edit', { user, error: null });
+            res.render('admin/users/edit', { title: 'Edit User', user, error: null, layout: 'layouts/admin' });
         } catch (error) {
             console.error('Error rendering edit user page:', error);
             res.status(500).send('Error loading user');
@@ -152,7 +152,7 @@ const adminController = {
             res.redirect('/admin/users');
         } catch (error) {
             console.error('Error editing user:', error);
-            res.render('admin/users/edit', { user, error: 'Error editing user. Username might already exist.' });
+            res.render('admin/users/edit', { title: 'Edit User', user, error: 'Error editing user. Username might already exist.' });
         }
     },
 
@@ -163,6 +163,15 @@ const adminController = {
         } catch (error) {
             console.error('Error deleting user:', error);
             res.status(500).send('Error deleting user');
+        }
+    },
+
+    selectAccount(req, res) {
+        const selectedAccount = req.query.selectedAccount;
+        if (selectedAccount) {
+            res.redirect(`/profile/${selectedAccount}`);
+        } else {
+            res.redirect('/admin/accounts');
         }
     }
 };

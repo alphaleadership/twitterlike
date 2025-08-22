@@ -10,7 +10,7 @@ async function migrateTweets() {
     const database = client.db('twitter_db');
     const tweetsCollection = database.collection('tweets');
 
-    const tweetsData = JSON.parse(fs.readFileSync('tweet.json', 'utf8'));
+    const tweetsData = JSON.parse(fs.readFileSync('tweets_with_local_media.json', 'utf8'));
 
     // Clear existing data before inserting new data (optional, but good for migration scripts)
     await tweetsCollection.deleteMany({});

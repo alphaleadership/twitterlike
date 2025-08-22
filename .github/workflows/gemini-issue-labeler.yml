@@ -2,7 +2,7 @@ name: Gemini Issue Assistant
 
 on:
   issues:
-    types: [opened,edited,commented]
+    types: [opened,edited]
 
 jobs:
   assist:

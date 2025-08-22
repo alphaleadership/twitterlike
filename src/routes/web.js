@@ -11,6 +11,7 @@ router.get('/profile/:username/videos', webController.renderProfileVideos);
 router.get('/profile/:username', webController.renderProfile);
 router.get('/tweet/:id', webController.renderTweetDetail);
 router.get('/all_media', webController.renderAllMedia);
+router.get('/videos', webController.renderVideos);
 router.get('/favorite_accounts_media', webController.renderFavoriteAccountsMedia);
 
 router.post('/hide/:username', webController.hideAccount);
