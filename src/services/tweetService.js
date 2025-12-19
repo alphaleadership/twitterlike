@@ -20,20 +20,23 @@ class TweetService {
     try {
       const collection = await this.getCollection();
       let tweets = await collection.find({}).toArray();
-      
+
+      // Masquer les réponses du flux principal (uniquement côté back)
+      tweets = tweets.filter(tweet => !tweet.reply && !tweet.reply_to);
+
       if (filterHidden) {
         const hiddenAccounts = getHiddenAccounts();
         const hiddenTweets = getHiddenTweets();
         tweets = tweets.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
       }
-      
+
       let userLikes = [];
       let userLikedAccounts = [];
       if (userId) {
         userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
         userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       }
-      
+
       return tweets.map(tweet => 
         enrichTweet(tweet, userLikes, userLikedAccounts)
       );
@@ -176,6 +179,9 @@ class TweetService {
   async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '', userId) {
     try {
       let allTweets = await this.getAllTweets(true, userId);
+
+      // Masquer les réponses ici aussi pour garantir la cohérence
+      allTweets = allTweets.filter(tweet => !tweet.reply && !tweet.reply_to);
 
       if (searchQuery) {
         const searchRegex = new RegExp(searchQuery, 'i');

@@ -31,6 +31,7 @@
             "mongodb": "^6.18.0",
             "mongoose": "^8.17.2",
             "morgan": "^1.10.0",
+            "stream-json": "^1.9.1",
             "validator": "^13.11.0"
       },
       "devDependencies": {

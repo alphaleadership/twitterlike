@@ -22,6 +22,7 @@ const webController = {
       const page = parseInt(req.query.page) || 1;
       const searchQuery = req.query.search || '';
       const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.getPaginatedTweets(page, formatTweetText, searchQuery, req.session.userId);
+      console.log(tweets)
       res.render('index', {
         tweets,
         currentPage,
@@ -45,6 +46,7 @@ const webController = {
       const userId = req.session.userId;
       const { tweets, favoriteAccounts } = await tweetService.getFavoriteTweets(userId);
       const allAccounts = await tweetService.getUniqueAccounts(userId);
+      console.log(tweets)
       res.render('favorites', { tweets, formatTweetText, favoriteAccounts, allAccounts, isLoggedIn: !!req.session.userId, username: req.session.username });
     } catch (error) {
       console.error('Error rendering favorites page:', error);
@@ -159,7 +161,7 @@ const webController = {
       const { user, tweets, media, topRetweetedAccounts, topMentionedAccounts, currentPage, totalPages } = await tweetService.getProfileData(username, page, searchQuery, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
-
+      console.log('Tweet data for profile.ejs:', tweets);
       // Download profile pictures for all accounts
       for (const account of allAccounts) {
         await fileUtils.downloadProfilePicture(account);
@@ -201,14 +203,18 @@ const webController = {
   async renderTweetDetail(req, res) {
     try {
       const tweetId = req.params.id;
-      const tweet = await tweetService.getTweetById(tweetId, formatTweetText, req.session.userId);
+      let tweet = await tweetService.getTweetById(tweetId, formatTweetText, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const { favorites: favoriteAccounts } = await accountService.getAccounts();
 
       if (tweet) {
+        // Récupérer les réponses à ce tweet (tweets dont reply ou reply_to == tweet.id)
+        const collection = await tweetService.getCollection();
+        const replies = await collection.find({ $or: [ { reply: tweet.id }, { reply_to: tweet.id } ] }).toArray();
+        tweet.replies = replies;
+
         // Récupérer d'autres tweets du même compte
         const { tweets: userTweets } = await tweetService.getTweetsByUsername(tweet.compte, 1, 50, formatTweetText, null, '', req.session.userId); // Prend jusqu'à 50 tweets
-        
         // Mélanger et prendre quelques suggestions, en excluant le tweet actuel
         const randomTweets = userTweets
           .filter(t => t.id !== tweet.id)

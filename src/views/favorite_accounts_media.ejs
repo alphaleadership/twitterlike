@@ -1,36 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Favorite Accounts Media</title>
+    <title>Médias des comptes favoris</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        
+        .page-container {
+            display: flex;
+            min-height: 100vh;
+            padding-left: 350px; /* Largeur de la sidebar */
+            box-sizing: border-box;
+        }
+        
+        .sidebar-container {
+            width: 350px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background-color: #2d3748;
+            z-index: 1;
+            border-right: 1px solid #4a5568;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            padding: 20px;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .media-item {
+            background: #2d3748;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .tweet-image, .tweet-video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .tweet-text {
+            padding: 12px;
+            margin: 0;
+            color: #e2e8f0;
+        }
+        
+        .username {
+            display: block;
+            padding: 0 12px 12px;
+            color: #4fd1c5;
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
-    <%- include('partials/sidebar') %>
-
-    <div class="main-content">
-        <h1>Media from Favorite Accounts</h1>
-
-        <div class="media-grid">
-            <% if (media && media.length > 0) { %>
-                <% media.forEach(tweet => { %>
-                    <div class="media-item">
-                        <% if (tweet.media && tweet.media.length > 0) { %>
-                            <img src="<%= tweet.media[0].locallien %>" alt="Tweet media" class="tweet-image">
-                        <% } else if (tweet.video && tweet.video.length > 0) { %>
-                            <video src="<%= tweet.video[0].lien %>" controls class="tweet-video"></video>
-                        <% } %>
-                        <p class="tweet-text"><%- formatTweetText(tweet.texte) %></p>
-                        <a href="/profile/<%= tweet.compte %>" class="username">@<%= tweet.compte %></a>
-                    </div>
-                <% }); %>
-            <% } else { %>
-                <p>No media found from favorite accounts.</p>
-            <% } %>
+    <div class="page-container">
+        <div class="sidebar-container">
+            <%- include('partials/sidebar') %>
         </div>
-
-        <%- include('partials/pagination') %>
+        
+        <div class="content-wrapper">
+            <h1>Médias des comptes favoris</h1>
+            
+            <div class="media-grid">
+                <% if (media && media.length > 0) { %>
+                    <% media.forEach(tweet => { %>
+                        <div class="media-item">
+                            <% if (tweet.media && tweet.media.length > 0) { %>
+                                <img src="<%= tweet.media[0].locallien %>" alt="Média du tweet" class="tweet-image">
+                            <% } else if (tweet.video && tweet.video.length > 0) { %>
+                                <video src="<%= tweet.video[0].lien %>" controls class="tweet-video"></video>
+                            <% } %>
+                            <p class="tweet-text"><%- formatTweetText(tweet.texte) %></p>
+                            <a href="/profile/<%= tweet.compte %>" class="username">@<%= tweet.compte %></a>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p>Aucun média trouvé dans les comptes favoris.</p>
+                <% } %>
+            </div>
+            
+            <%- include('partials/pagination') %>
     </div>
 </body>
 </html>

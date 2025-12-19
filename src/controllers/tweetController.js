@@ -10,7 +10,7 @@ const tweetController = {
       const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getPaginatedTweets(page, null, null, userId);
       const allAccounts = await tweetService.getUniqueAccounts();
       const favoriteAccounts = (await accountService.getAccounts()).favorites;
-      
+      console.log(tweets)
       res.json({
         tweets,
         currentPage,
@@ -58,6 +58,7 @@ const tweetController = {
       const page = parseInt(req.query.page) || 1;
       
       const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getTweetsByUsername(username, page);
+      console.log(tweets)
       res.json({ 
         tweets, 
         currentPage, 

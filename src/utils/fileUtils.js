@@ -120,21 +120,21 @@ const downloadProfilePicture = async (username) => {
 
   // Check if the file already exists
   if (fs.existsSync(imagePath)) {
-    console.log(`Profile picture for ${username.account} already exists. Skipping download.`);
+  //  console.log(`Profile picture for ${username.account} already exists. Skipping download.`);
     return true;
   }
 
   try {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     if (response.status !== 200) {
-      console.warn(`Could not download profile picture for ${username.account}:`);
+  //    console.warn(`Could not download profile picture for ${username.account}:`);
       return false;
     }
     fs.writeFileSync(imagePath, response.data);
-    console.log(`Downloaded profile picture for ${username.account}`);
+   // console.log(`Downloaded profile picture for ${username.account}`);
     return true;
   } catch (error) {
-    console.error(`Error downloading profile picture for ${username.account}:`);
+   // console.error(`Error downloading profile picture for ${username.account}:`);
     return false;
   }
 };
