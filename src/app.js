@@ -22,7 +22,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layouts/main'); // default layout
-
+/*
 // Session middleware
 app.use(session({
   secret: process.env.SESSION_SECRET || 'supersecretkey',
@@ -62,7 +62,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-
+*/
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -75,17 +75,17 @@ app.use(morgan('dev')); // Log to console as well
 
 // Serve static files from the public directory for EJS templates
 app.use('/public', express.static(path.join(__dirname, 'public')));
-
+/*
 // Web Routes (for EJS rendering) - MUST come before SPA fallback
 app.use('/', webRoutes);
 app.use('/admin', adminRoutes);
 app.use('/auth', authRoutes);
-
+*/
 // Serve static files from the dist directory for the SPA (if still used)
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // API Routes
-app.use('/api', apiRoutes);
+//app.use('/api', apiRoutes);
 
 // Handle 404 - Keep this as the last route
 app.use((req, res, next) => {
@@ -100,10 +100,10 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    await connectToMongo();
+    //await connectToMongo();
 
     // Check if admin collection is empty and create owner account if needed
-    console.log('Checking for existing admin accounts...');
+   /* console.log('Checking for existing admin accounts...');
     const adminCount = await Admin.countDocuments();
     console.log(`Found ${adminCount} admin accounts.`);
     if (adminCount === 0 && process.env.OWNER_USERNAME && process.env.OWNER_PASSWORD) {
@@ -119,7 +119,7 @@ async function startServer() {
     } else {
       console.log('OWNER_USERNAME or OWNER_PASSWORD environment variables are not set. Skipping default owner account creation.');
     }
-
+*/
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
