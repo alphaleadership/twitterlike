@@ -17,6 +17,7 @@ fs.readFile(tweetsFilePath, 'utf8', (err, data) => {
             if (tweet.media && Array.isArray(tweet.media)) {
                 tweet.media.forEach(mediaItem => {
                     if (mediaItem.lien && mediaItem.lien.endsWith('.jpg')) {
+                        mediaItem.lien=mediaItem.lien.replace("images//","images/")
                         mediaItem.type = 'photo';
                     }
                 });
