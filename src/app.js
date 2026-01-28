@@ -15,25 +15,21 @@ const app = express();
 
 // Session setup
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+var FileStore = require('session-file-store')(session);
+
 
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layouts/main'); // default layout
-/*
+var fileStoreOptions = {};
 // Session middleware
 app.use(session({
   secret: process.env.SESSION_SECRET || 'supersecretkey',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/twitter_db',
-    ttl: 14 * 24 * 60 * 60, // 14 days
-    autoRemove: 'interval',
-    autoRemoveInterval: 10 // In minutes. Removes expired sessions every 10 minutes
-  }),
+  store:new FileStore(fileStoreOptions),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
@@ -43,12 +39,13 @@ app.use(session({
 
 // Middleware to store previous URLs
 app.use((req, res, next) => {
-  if (!req.session.previousUrls) {
-    req.session.previousUrls = [];
-  }
+  
 
   // Only store URLs that are not from the /public directory
   if (!req.originalUrl.startsWith('/public')) {
+    if (!req.session.previousUrls) {
+    req.session.previousUrls = [];
+  }
     // Add current URL to the beginning of the array
     // Only if it's not the same as the last one (to avoid duplicates on refresh)
     if (req.session.previousUrls[0] !== req.originalUrl) {
@@ -62,7 +59,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-*/
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -75,17 +72,17 @@ app.use(morgan('dev')); // Log to console as well
 
 // Serve static files from the public directory for EJS templates
 app.use('/public', express.static(path.join(__dirname, 'public')));
-/*
+
 // Web Routes (for EJS rendering) - MUST come before SPA fallback
 app.use('/', webRoutes);
 app.use('/admin', adminRoutes);
 app.use('/auth', authRoutes);
-*/
+
 // Serve static files from the dist directory for the SPA (if still used)
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // API Routes
-//app.use('/api', apiRoutes);
+app.use('/api', apiRoutes);
 
 // Handle 404 - Keep this as the last route
 app.use((req, res, next) => {
@@ -100,7 +97,7 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    //await connectToMongo();
+    await connectToMongo();
 
     // Check if admin collection is empty and create owner account if needed
    /* console.log('Checking for existing admin accounts...');

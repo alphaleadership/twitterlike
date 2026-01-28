@@ -13,3 +13,5 @@ dumps
 new_users.csv
 tweets_no_date.json
 
+sessions/*
+temp.js

@@ -19,8 +19,7 @@ async function connectToMongo() {
 
       console.log('Attempting to connect to MongoDB via Mongoose...');
       await mongoose.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+
         dbName: dbName // Specify the database name for Mongoose
       });
       console.log('Mongoose connected to MongoDB');

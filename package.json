@@ -20,7 +20,7 @@
             "bcrypt": "^5.1.1",
             "bcryptjs": "^3.0.3",
             "compression": "^1.8.1",
-            "connect-mongo": "^5.1.0",
+         
             "dotenv": "^16.6.1",
             "ejs": "^3.1.10",
             "express": "^5.2.1",
@@ -28,9 +28,10 @@
             "express-rate-limit": "^7.5.1",
             "express-session": "^1.18.2",
             "helmet": "^7.2.0",
-            "mongodb": "^6.21.0",
-            "mongoose": "^8.21.0",
+            "mongodb": "^7.0.0",
+            "mongoose": "^9.1.5",
             "morgan": "^1.10.1",
+            "session-file-store": "^1.5.0",
             "stream-json": "^1.9.1",
             "validator": "^13.15.26"
       },
