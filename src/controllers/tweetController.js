@@ -27,7 +27,7 @@ const tweetController = {
 
   async searchTweets(req, res) {
     try {
-      const query = req.query.q || '';
+      const query = req.query.query || '';
       const page = parseInt(req.query.page) || 1;
       
       if (!query.trim()) {
@@ -143,7 +143,7 @@ const tweetController = {
         tweets: paginatedTweets,
         currentPage: page,
         totalPages: Math.ceil(mediaTweets.length / pageSize),
-        totalMedia: mediaTweets.length
+        totalMedia: mediaTweets.length,allAccounts:[]
       });
     } catch (error) {
       console.error(`Error getting profile media for ${req.params.username}:`, error);

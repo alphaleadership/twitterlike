@@ -1,0 +1,32 @@
+<header class="app-header">
+    <div class="header-content">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <span class="logo-icon">🐦</span>
+                <span class="logo-text">Twitterlike</span>
+            </a>
+        </div>
+        
+        <div class="header-center">
+            <form action="/search" method="get" class="search-form">
+                <input type="text" name="query" placeholder="Rechercher des tweets..." value="<%= typeof query !== 'undefined' ? query : '' %>">
+                <button type="submit">🔍</button>
+            </form>
+        </div>
+        
+        <nav class="header-right">
+            <a href="/videos" title="Vidéos">🎥</a>
+            <a href="/favorites" title="Favoris">❤️</a>
+            <% if (typeof user !== 'undefined' && user) { %>
+                <div class="user-menu">
+                    <span class="username"><%= user.username %></span>
+                    <form action="/auth/logout" method="POST" class="inline-form">
+                        <button type="submit" class="logout-btn">Déconnexion</button>
+                    </form>
+                </div>
+            <% } else { %>
+                <a href="/auth/login" class="login-link">Connexion</a>
+            <% } %>
+        </nav>
+    </div>
+</header>

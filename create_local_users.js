@@ -21,34 +21,43 @@ async function createLocalUsers() {
         await connectToMongo();
         console.log("Database connected.");
 
-        console.log("Getting unique accounts from tweets...");
-        const allTweets = await tweetService.getAllTweets(false);
-        const uniqueAccounts = new Set();
-        allTweets.forEach(tweet => {
-            uniqueAccounts.add(tweet.compte);
-        });
-        const allAccounts = Array.from(uniqueAccounts);
-        console.log(`Found ${allAccounts.length} unique accounts.`);
+        console.log("Getting unique accounts from tweets via aggregation...");
+        
+        const collection = await tweetService.getCollection();
+        const accountsCursor = collection.aggregate([
+            { $group: { _id: "$compte" } }
+        ]);
+        
+        let count = 0;
+        let createdCount = 0;
 
-        for (const account of allAccounts) {
+        const outputPath = path.join(__dirname, "new_users.csv");
+        // Initialize CSV file
+        fs.writeFileSync(outputPath, "username,password\n");
+
+        for await (const doc of accountsCursor) {
+            const account = doc._id;
+            if (!account) continue;
+
             const existingUser = await User.findOne({ username: account });
             if (!existingUser) {
                 const password = generateRandomPassword();
                 const user = new User({ username: account, password: password });
                 await user.save();
-                console.log(`User ${account} created.`);
-                createdUsers.push({ username: account, password: password });
-            } else {
-                console.log(`User ${account} already exists.`);
-            }
+                
+                // Append directly to file to avoid memory bloat
+                fs.appendFileSync(outputPath, `${account},${password}\n`);
+                createdCount++;
+            } 
+            
+            count++;
+            if (count % 100 === 0) process.stdout.write(`\rChecked ${count} accounts...`);
         }
-
-        if (createdUsers.length > 0) {
-            const csvData = createdUsers.map(user => `${user.username},${user.password}`).join("\n");
-            const outputPath = path.join(__dirname, "new_users.csv");
-            fs.writeFileSync(outputPath, "username,password\n" + csvData);
-            console.log(`Created user credentials saved to ${outputPath}`);
-        }
+        
+        console.log(`\nProcess completed.`);
+        console.log(`Checked ${count} accounts.`);
+        console.log(`Created ${createdCount} new users.`);
+        console.log(`Credentials saved to ${outputPath}`);
 
     } catch (error) {
         console.error("An error occurred:", error);

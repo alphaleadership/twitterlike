@@ -1,6 +1,10 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
+const { parser } = require('stream-json');
+const { streamArray } = require('stream-json/streamers/StreamArray');
+const { chain } = require('stream-chain');
 require("dotenv").config();
+
 async function migrateTweets() {
   const uri = process.env.MONGO_URI;
   const client = new MongoClient(uri);
@@ -10,18 +14,69 @@ async function migrateTweets() {
     const database = client.db('twitter_db');
     const tweetsCollection = database.collection('tweets');
 
-    const tweetsData = JSON.parse(fs.readFileSync('tweets_with_local_media.json', 'utf8'));
-
-    // Clear existing data before inserting new data (optional, but good for migration scripts)
+    console.log('Clearing existing tweets...');
     await tweetsCollection.deleteMany({});
-    console.log('Existing tweets cleared from MongoDB.');
+    console.log('Existing tweets cleared.');
 
-    await tweetsCollection.insertMany(tweetsData);
-    console.log('Tweets migrated successfully to MongoDB.');
+    const filePath = 'tweets_with_local_media.json';
+    if (!fs.existsSync(filePath)) {
+        console.error(`File ${filePath} not found.`);
+        return;
+    }
+
+    const pipeline = chain([
+      fs.createReadStream(filePath),
+      parser(),
+      streamArray()
+    ]);
+
+    let buffer = [];
+    const BATCH_SIZE = 1000;
+    let count = 0;
+
+    console.log('Starting migration...');
+
+    pipeline.on('data', async (data) => {
+        const tweet = data.value;
+        buffer.push(tweet);
+
+        if (buffer.length >= BATCH_SIZE) {
+            pipeline.pause(); // Pause reading while inserting
+            try {
+                await tweetsCollection.insertMany(buffer);
+                count += buffer.length;
+                console.log(`Inserted ${count} tweets...`);
+                buffer = [];
+            } catch (err) {
+                console.error('Error inserting batch:', err);
+            } finally {
+                pipeline.resume();
+            }
+        }
+    });
+
+    pipeline.on('end', async () => {
+        if (buffer.length > 0) {
+            try {
+                await tweetsCollection.insertMany(buffer);
+                count += buffer.length;
+                console.log(`Inserted remaining ${buffer.length} tweets.`);
+            } catch (err) {
+                console.error('Error inserting final batch:', err);
+            }
+        }
+        console.log(`Migration completed. Total tweets: ${count}`);
+        await client.close();
+    });
+
+    pipeline.on('error', (err) => {
+        console.error('Stream error:', err);
+        client.close();
+    });
+
   } catch (e) {
-    console.error('Error migrating tweets:', e);
-  } finally {
-    await client.close();
+    console.error('Error connecting to DB:', e);
+    if (client) await client.close();
   }
 }
 

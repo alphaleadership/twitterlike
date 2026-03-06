@@ -1,30 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitter-like Feed</title>
-    <link rel="stylesheet" href="/public/css/style.css">
-</head>
-<body>
-    <div class="container">
-        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
-        <div class="main-content">
-            <h1>Welcome to the Twitter-like Feed</h1>
+<div class="container">
+    <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
+    <div class="main-content">
+        <h1>Flux des Tweets</h1>
 
-            <!-- Search Form -->
-            <div class="mb-4">
-                <form action="/search" method="GET">
-                    <div class="input-group">
-                        <input type="text" name="query" class="form-control" placeholder="Search for tweets..." aria-label="Search for tweets">
-                        <button class="btn btn-primary" type="submit">Search</button>
-                    </div>
-                </form>
-            </div>
-
-            <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn }) %>
-            <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/' }) %>
-        </div>
+        <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn }) %>
+        <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/', search: searchQuery }) %>
     </div>
-</body>
-</html>
+</div>
