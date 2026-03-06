@@ -1,21 +1,119 @@
 /* General Body Styles */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
     background-color: #1a202c; /* Dark background */
     color: #e2e8f0; /* Light text */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* App Header */
+.app-header {
+    background-color: #2d3748;
+    border-bottom: 1px solid #4a5568;
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+.header-left .logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    gap: 10px;
+}
+
+.logo-icon { font-size: 1.5rem; }
+.logo-text {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #4fd1c5;
+}
+
+.header-center {
+    flex: 0 1 400px;
+}
+
+.search-form {
+    display: flex;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 20px;
+    padding: 5px 15px;
+}
+
+.search-form input {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 5px;
+    width: 100%;
+    outline: none;
+}
+
+.search-form button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-right a {
+    text-decoration: none;
+    font-size: 1.2rem;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.9rem;
+}
+
+.logout-btn {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 /* Main Container */
-.container {
+.app-container {
     display: flex;
     max-width: 1300px;
-    margin: 20px auto;
-    background-color: #2d3748; /* Darker container background */
-    border-radius: 12px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    margin: 0 auto;
+    flex: 1;
     overflow: hidden;
-    height: calc(100vh - 40px);
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    background-color: #2d3748; /* Darker container background */
+    overflow: hidden;
 }
 
 /* Sidebar Styles */

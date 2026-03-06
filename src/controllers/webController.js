@@ -138,7 +138,7 @@ const webController = {
           videos,
           currentPage,
           totalPages,
-          sidebarAccounts:allAccounts,
+          allAccounts:allAccounts,
           favoriteAccounts,
           isLoggedIn: !!req.session.userId,
           username: req.session.username

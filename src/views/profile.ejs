@@ -1,47 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= user.username %>'s Profile</title>
-    <link rel="icon" href="/public/images/profiles/<%= user.username %>.png" type="image/png" onerror="this.onerror=null;this.href='/public/images/default_profile.png';">
-    <link rel="stylesheet" href="/public/css/style.css">
-</head>
-<body>
-    <div class="container">
-        <%- include('partials/sidebar', { sidebarAccounts: topMentionedAccounts, favoriteAccounts: favoriteAccounts, searchQuery: '' }) %>
-        <div class="main-content">
-            <h1><%= user.username %>'s Profile</h1>
-            <p><a href="/">Return to Homepage</a></p>
-            <% if (isLoggedIn) { %>
+<div class="container">
+    <%- include('partials/sidebar', { sidebarAccounts: topMentionedAccounts || [], favoriteAccounts: favoriteAccounts || [], searchQuery: searchQuery }) %>
+    <div class="main-content">
+        <h1>Profil de <%= user.username %></h1>
+        <p><a href="/">Retour à l'accueil</a></p>
+        <% if (isLoggedIn) { %>
+            <div class="profile-actions">
                 <form action="/like-all-tweets/<%= user.username %>" method="post" style="display: inline;">
-                    <button type="submit">Like All Tweets</button>
+                    <button type="submit" class="btn">Liker tous les tweets</button>
                 </form>
                 <form action="/like-all-media-tweets/<%= user.username %>" method="post" style="display: inline;">
-                    <button type="submit">Like All Media Tweets</button>
-                </form>
-            <% } %>
-            <p>Total Tweets: <%= tweets.length %></p>
-            <div class="profile-nav">
-                <a href="/profile/<%= user.username %>">Tweets</a>
-                <a href="/profile/<%= user.username %>/media">Media</a>
-                <a href="/profile/<%= user.username %>/videos">Videos</a>
-            </div>
-            <h2>Tweets</h2>
-            <!-- Search Form -->
-            <div class="mb-4">
-                <form action="/search" method="GET">
-                    <div class="input-group">
-                        <input type="text" name="query" class="form-control" placeholder="Search for tweets..." aria-label="Search for tweets" value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
-                        <button class="btn btn-primary" type="submit">Search</button>
-                    </div>
+                    <button type="submit" class="btn">Liker tous les médias</button>
                 </form>
             </div>
-            <div id="tweetListContainer">
-                <%- include('partials/tweetList', { tweets: tweets, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
-            </div>
-            <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages }) %>
+        <% } %>
+        
+        <div class="profile-nav">
+            <a href="/profile/<%= user.username %>" class="active">Tweets</a>
+            <a href="/profile/<%= user.username %>/media">Médias</a>
+            <a href="/profile/<%= user.username %>/videos">Vidéos</a>
         </div>
+        
+        <div id="tweetListContainer">
+            <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn }) %>
+        </div>
+        <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/profile/' + user.username, search: searchQuery }) %>
     </div>
-</body>
-</html>
+</div>

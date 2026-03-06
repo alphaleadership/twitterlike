@@ -1,32 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= user.username %>'s Media</title>
-    <link rel="stylesheet" href="/public/css/style.css">
-</head>
-<body>
-    <div class="container">
-        <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts, isLoggedIn: isLoggedIn }) %>
-        <div class="main-content">
-            <h1>Media from <%= user.username %></h1>
-            <p><a href="/profile/<%= user.username %>">Return to Profile</a></p>
-            <div class="media-grid">
-                <% media.forEach(item => { %>
-                    <div class="media-item">
-                        <a href="/tweet/<%= item.tweetId %>">
-                            <% if (item.type === 'photo') { %>
-                                <img src="<%= item.lien %>" alt="Tweet Media">
-                            <% } else if (item.type === 'video') { %>
-                                <video controls src="<%= item.lien %>"></video>
-                            <% } %>
-                        </a>
-                    </div>
-                <% }); %>
-            </div>
-            <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages }) %>
+<div class="container">
+    <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts, isLoggedIn: isLoggedIn }) %>
+    <div class="main-content">
+        <h1>Médias de <%= user.username %></h1>
+        <p><a href="/profile/<%= user.username %>">Retour au profil</a></p>
+        <div class="media-grid">
+            <% media.forEach(item => { %>
+                <div class="media-item">
+                    <a href="/tweet/<%= item.tweetId %>">
+                        <% if (item.type === 'photo') { %>
+                            <img src="<%= item.locallien || item.lien %>" alt="Média">
+                        <% } else if (item.type === 'video') { %>
+                            <video controls src="<%= item.lien %>"></video>
+                        <% } %>
+                    </a>
+                </div>
+            <% }); %>
         </div>
+        <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/profile/' + user.username + '/media' }) %>
     </div>
-</body>
-</html>
+</div>

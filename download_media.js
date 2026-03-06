@@ -28,7 +28,7 @@ const downloadMedia = (mediaItem) => {
         // Vérifier si le fichier existe déjà
         if (fs.existsSync(localPath)) {
             console.log(`File already exists: ${fileName}, skipping download`);
-            mediaItem.locallien = `http://localhost:3000/public/images/tweet_media/${fileName}`;
+            mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
             return resolve();
         }
 
@@ -53,7 +53,7 @@ const downloadMedia = (mediaItem) => {
 
             fileStream.on('finish', () => {
                 fileStream.close(() => {
-                    mediaItem.locallien = `http://localhost:3000/public/images/tweet_media/${fileName}`;
+                    mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
                     console.log(`Downloaded and updated to ${mediaItem.lien}`);
                     resolve();
                 });
@@ -84,7 +84,9 @@ const processTweets = async () => {
 
     pipeline.on('data', async ({ value: tweet }) => {
         pipeline.pause(); // Pause the stream to process the current tweet
-
+        if(tweet._id){
+            delete tweet._id
+        }
         if (tweet.media && Array.isArray(tweet.media)) {
             for (const mediaItem of tweet.media) {
                 await downloadMedia(mediaItem);

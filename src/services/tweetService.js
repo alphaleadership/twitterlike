@@ -80,16 +80,30 @@ class TweetService {
     try {
       const collection = await this.getCollection();
       let query = { compte: username };
-      if (searchQuery) {
-        query.texte = { $regex: searchQuery, $options: 'i' };
-      }
-      const allTweets = await collection.find(query).toArray();
-      
-      allTweets.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedTweets = allTweets.slice(startIndex, endIndex);
+              if (searchQuery) {
+                const words = searchQuery.trim().split(/\s+/).filter(word => word.length > 0);
+                if (words.length > 0) {
+                  const searchQueries = words.map(word => {
+                    const searchRegex = new RegExp(word, 'i');
+                    return {
+                                  $or: [
+                                    { texte: { $regex: searchRegex } },
+                                    { 'hashtags.text': { $regex: searchRegex } },
+                                    { 'retweeted_status.texte': { $regex: searchRegex } },
+                                    { 'retweeted_status.compte': { $regex: searchRegex } }
+                                  ]                    };
+                  });
+                  query.$and = [...(query.$and || []), ...searchQueries];
+                }
+              }      const totalTweets = await collection.countDocuments(query);
+      const totalPages = Math.ceil(totalTweets / pageSize);
+      const skip = (page - 1) * pageSize;
+
+      const paginatedTweets = await collection.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .toArray();
       
       let userLikes = [];
       let userLikedAccounts = [];
@@ -104,8 +118,8 @@ class TweetService {
       return {
         tweets: enrichedTweets,
         currentPage: page,
-        totalPages: Math.ceil(allTweets.length / pageSize),
-        totalTweets: allTweets.length
+        totalPages: totalPages || 1,
+        totalTweets: totalTweets
       };
     } catch (error) {
       console.error(`Error getting tweets for user ${username}:`, error);
@@ -116,30 +130,40 @@ class TweetService {
   async searchTweets(query, page = 1, pageSize = 10, formatTweetText, userId = null) {
     try {
       const collection = await this.getCollection();
-      const searchRegex = new RegExp(query, 'i');
-      
-      const allResults = await collection.find({
-        $or: [
-          { texte: { $regex: searchRegex } },
-          { 'hashtags.text': { $regex: searchRegex } },
-          { compte: { $regex: searchRegex } }
-        ]
-      }).toArray();
-
       const hiddenAccounts = getHiddenAccounts();
       const hiddenTweets = getHiddenTweets();
-      const filteredResults = allResults.filter(tweet => !hiddenAccounts.includes(tweet.compte) && !hiddenTweets.includes(tweet.id));
-
-      // Trier les résultats par date (du plus récent au plus ancien)
-      filteredResults.sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-      });
       
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedResults = filteredResults.slice(startIndex, endIndex);
+      const words = query.trim().split(/\s+/).filter(word => word.length > 0);
+      const searchQueries = words.map(word => {
+        const searchRegex = new RegExp(word, 'i');
+        return {
+          $or: [
+            { texte: { $regex: searchRegex } },
+            { 'hashtags.text': { $regex: searchRegex } },
+            { compte: { $regex: searchRegex } },
+            { 'retweeted_status.texte': { $regex: searchRegex } },
+            { 'retweeted_status.compte': { $regex: searchRegex } }
+          ]
+        };
+      });
+
+      const dbQuery = {
+        $and: [
+          ...(searchQueries.length > 0 ? searchQueries : [{}]),
+          { compte: { $nin: hiddenAccounts } },
+          { id: { $nin: hiddenTweets } }
+        ]
+      };
+
+      const totalResults = await collection.countDocuments(dbQuery);
+      const totalPages = Math.ceil(totalResults / pageSize);
+      const skip = (page - 1) * pageSize;
+
+      const results = await collection.find(dbQuery)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .toArray();
       
       let userLikes = [];
       let userLikedAccounts = [];
@@ -147,26 +171,25 @@ class TweetService {
         userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
         userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       }
-      const enrichedResults = paginatedResults.map(tweet => 
+      const enrichedResults = results.map(tweet => 
         enrichTweet(tweet, userLikes, userLikedAccounts, formatTweetText)
       );
       
-      const uniqueAccounts = {};
-      filteredResults.forEach(tweet => {
-        if (!hiddenAccounts.includes(tweet.compte)) {
-          uniqueAccounts[tweet.compte] = (uniqueAccounts[tweet.compte] || 0) + 1;
-        }
-      });
+      // Lightweight aggregation for sidebar stats
+      const accountStats = await collection.aggregate([
+        { $match: dbQuery },
+        { $group: { _id: "$compte", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 50 }
+      ]).toArray();
   
-      const sortedAccounts = Object.entries(uniqueAccounts)
-        .map(([account, count]) => ({ account, count }))
-        .sort((a, b) => b.count - a.count)
+      const sortedAccounts = accountStats.map(s => ({ account: s._id, count: s.count }));
 
       return {
         tweets: enrichedResults,
         currentPage: page,
-        totalPages: Math.ceil(filteredResults.length / pageSize),
-        totalResults: filteredResults.length,
+        totalPages: totalPages || 1,
+        totalResults: totalResults,
         allAccounts: sortedAccounts,
         favoriteAccounts: userLikedAccounts
       };
@@ -178,47 +201,63 @@ class TweetService {
 
   async getPaginatedTweets(page = 1, formatTweetText, searchQuery = '', userId) {
     try {
-      let allTweets = await this.getAllTweets(true, userId);
+      const collection = await this.getCollection();
+      const hiddenAccounts = getHiddenAccounts();
+      const hiddenTweets = getHiddenTweets();
 
-      // Masquer les réponses ici aussi pour garantir la cohérence
-      allTweets = allTweets.filter(tweet => !tweet.reply && !tweet.reply_to);
+      const query = {
+        reply: { $ne: true },
+        reply_to: { $ne: true },
+        compte: { $nin: hiddenAccounts },
+        id: { $nin: hiddenTweets }
+      };
 
       if (searchQuery) {
-        const searchRegex = new RegExp(searchQuery, 'i');
-        allTweets = allTweets.filter(tweet => searchRegex.test(tweet.compte));
+        const words = searchQuery.trim().split(/\s+/).filter(word => word.length > 0);
+        if (words.length > 0) {
+          const searchQueries = words.map(word => {
+            const searchRegex = new RegExp(word, 'i');
+            return {
+              $or: [
+                { compte: { $regex: searchRegex } },
+                { texte: { $regex: searchRegex } },
+                { 'hashtags.text': { $regex: searchRegex } },
+                { 'retweeted_status.texte': { $regex: searchRegex } },
+                { 'retweeted_status.compte': { $regex: searchRegex } }
+              ]
+            };
+          });
+          query.$and = [...(query.$and || []), ...searchQueries];
+        }
       }
 
-      const startIndex = (page - 1) * this.tweetsPerPage;
-      const endIndex = startIndex + this.tweetsPerPage;
+      const totalTweets = await collection.countDocuments(query);
+      const totalPages = Math.ceil(totalTweets / this.tweetsPerPage);
+      const skip = (page - 1) * this.tweetsPerPage;
 
-      // Trier les tweets par date (du plus récent au plus ancien)
-      allTweets.sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-      });
-      
-      const hiddenAccounts = getHiddenAccounts();
+      const tweets = await collection.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(this.tweetsPerPage)
+        .toArray();
+
       let userLikedAccounts = [];
+      let userLikes = [];
       if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
         userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       }
-      const uniqueAccounts = {};
-      allTweets.forEach(tweet => {
-        if (!hiddenAccounts.includes(tweet.compte)) {
-          uniqueAccounts[tweet.compte] = (uniqueAccounts[tweet.compte] || 0) + 1;
-        }
-      });
-  
-      const sortedAccounts = Object.entries(uniqueAccounts)
-        .map(([account, count]) => ({ account, count }))
-        .sort((a, b) => b.count - a.count)
 
+      const enrichedTweets = tweets.map(tweet =>
+        enrichTweet(tweet, userLikes, userLikedAccounts, formatTweetText, this)
+      );
+
+      // We don't return allAccounts here anymore as it's heavy and handled separately by getUniqueAccounts
       return {
-        tweets: allTweets.slice(startIndex, endIndex),
+        tweets: enrichedTweets,
         currentPage: page,
-        totalPages: Math.ceil(allTweets.length / this.tweetsPerPage),
-        allAccounts: sortedAccounts,
+        totalPages: totalPages || 1,
+        allAccounts: [],
         favoriteAccounts: userLikedAccounts
       };
     } catch (error) {
@@ -229,18 +268,20 @@ class TweetService {
 
   async getUniqueAccounts(userId = null) {
     try {
-      const allTweets = await this.getAllTweets(true, userId);
-      const accountCounts = {};
-      
-      allTweets.forEach(tweet => {
-        accountCounts[tweet.compte] = (accountCounts[tweet.compte] || 0) + 1;
-      });
-      
-      return Object.entries(accountCounts)
-        .filter(([account, count]) => count > 10) // Filter accounts with more than 10 tweets
-        .map(([account, count]) => ({ account, count }))
-        .sort((a, b) => b.count - a.count)
-        
+      const collection = await this.getCollection();
+      const hiddenAccounts = getHiddenAccounts();
+
+      const pipeline = [
+        { $match: { compte: { $nin: hiddenAccounts } } },
+        { $group: { _id: "$compte", count: { $sum: 1 } } },
+        { $match: { count: { $gt: 10 } } },
+        { $sort: { count: -1 } }
+      ];
+
+      const results = await collection.aggregate(pipeline).toArray();
+
+      return results.map(r => ({ account: r._id, count: r.count }));
+
     } catch (error) {
       console.error('Error getting unique accounts:', error);
       throw error;
@@ -249,28 +290,49 @@ class TweetService {
 
   async getTweetsWithMedia(page = 1, userId = null) {
     try {
-      const allTweets = await this.getAllTweets(true, userId);
+      const collection = await this.getCollection();
+      const hiddenAccounts = getHiddenAccounts();
+      const hiddenTweets = getHiddenTweets();
+
+      const query = {
+        $and: [
+          {
+            $or: [
+              { "media.0": { $exists: true } },
+              { "video.0": { $exists: true } }
+            ]
+          },
+          { compte: { $nin: hiddenAccounts } },
+          { id: { $nin: hiddenTweets } }
+        ]
+      };
+
+      const totalMedia = await collection.countDocuments(query);
+      const totalPages = Math.ceil(totalMedia / this.mediaPerPage);
+      const skip = (page - 1) * this.mediaPerPage;
+
+      const tweets = await collection.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(this.mediaPerPage)
+        .toArray();
       
-      const mediaTweets = allTweets.filter(tweet => 
-        (tweet.media && tweet.media.length > 0) || 
-        (tweet.video && tweet.video.length > 0)
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
+
+      const enrichedTweets = tweets.map(tweet => 
+        enrichTweet(tweet, userLikes, userLikedAccounts, null, this)
       );
       
-      mediaTweets.sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-      });
-      
-      const startIndex = (page - 1) * this.mediaPerPage;
-      const endIndex = startIndex + this.mediaPerPage;
-      const paginatedTweets = mediaTweets.slice(startIndex, endIndex);
-      
       return {
-        tweets: paginatedTweets,
+        tweets: enrichedTweets,
         currentPage: page,
-        totalPages: Math.ceil(mediaTweets.length / this.mediaPerPage),
-        totalMedia: mediaTweets.length
+        totalPages: totalPages || 1,
+        totalMedia: totalMedia
       };
     } catch (error) {
       console.error('Error getting tweets with media:', error);
@@ -280,27 +342,44 @@ class TweetService {
 
   async getTweetsWithVideos(page = 1, userId = null) {
     try {
-      const allTweets = await this.getAllTweets(true, userId);
+      const collection = await this.getCollection();
+      const hiddenAccounts = getHiddenAccounts();
+      const hiddenTweets = getHiddenTweets();
+
+      const query = {
+        $and: [
+          { "video.0": { $exists: true } },
+          { compte: { $nin: hiddenAccounts } },
+          { id: { $nin: hiddenTweets } }
+        ]
+      };
+
+      const totalVideos = await collection.countDocuments(query);
+      const totalPages = Math.ceil(totalVideos / this.videosPerPage);
+      const skip = (page - 1) * this.videosPerPage;
+
+      const tweets = await collection.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(this.videosPerPage)
+        .toArray();
       
-      const videoTweets = allTweets.filter(tweet => 
-        tweet.video && tweet.video.length > 0
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
+
+      const enrichedTweets = tweets.map(tweet => 
+        enrichTweet(tweet, userLikes, userLikedAccounts, null, this)
       );
       
-      videoTweets.sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-      });
-      
-      const startIndex = (page - 1) * this.videosPerPage;
-      const endIndex = startIndex + this.videosPerPage;
-      const paginatedTweets = videoTweets.slice(startIndex, endIndex);
-      
       return {
-        tweets: paginatedTweets,
+        tweets: enrichedTweets,
         currentPage: page,
-        totalPages: Math.ceil(videoTweets.length / this.videosPerPage),
-        totalVideos: videoTweets.length
+        totalPages: totalPages || 1,
+        totalVideos: totalVideos
       };
     } catch (error) {
       console.error('Error getting tweets with videos:', error);

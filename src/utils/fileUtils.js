@@ -120,7 +120,7 @@ const downloadProfilePicture = async (username) => {
 
   // Check if the file already exists
   if (fs.existsSync(imagePath)) {
-  //  console.log(`Profile picture for ${username.account} already exists. Skipping download.`);
+    console.log(`Profile picture for ${username.account} already exists. Skipping download.`);
     return true;
   }
 

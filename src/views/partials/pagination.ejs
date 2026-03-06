@@ -7,13 +7,13 @@
 
     <% if (currentPage > 1) { %>
         <% queryParams.set('page', currentPage - 1); %>
-        <a href="?<%= queryParams.toString() %>">Previous</a>
+        <a href="<%= baseUrl %>?<%= queryParams.toString() %>">Previous</a>
     <% } %>
 
     <span>Page <%= currentPage %> of <%= totalPages %></span>
 
     <% if (currentPage < totalPages) { %>
         <% queryParams.set('page', currentPage + 1); %>
-        <a href="?<%= queryParams.toString() %>">Next</a>
+        <a href="<%= baseUrl %>?<%= queryParams.toString() %>">Next</a>
     <% } %>
 </div>

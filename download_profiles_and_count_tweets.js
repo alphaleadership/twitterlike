@@ -12,29 +12,34 @@ async function runProfileDownloadAndCount() {
 
     console.log("Starting profile picture download and tweet count...");
 
-    // Get all tweets from MongoDB
-    const allTweets = await tweetService.getAllTweets(false); // Get all tweets, don't filter hidden
-    
-    // Use a Set to get unique account names
-    const uniqueAccounts = new Set();
-    allTweets.forEach(tweet => {
-      uniqueAccounts.add(tweet.compte);
-    });
-    const allAccounts = Array.from(uniqueAccounts);
+    const collection = await tweetService.getCollection();
 
-    console.log(`Found ${allAccounts.length} unique accounts from MongoDB.`);
-    for (const account of allAccounts) {
-      await fileUtils.downloadProfilePicture({account: account});
+    // Use aggregation to get unique accounts without loading all tweets
+    console.log("Fetching unique accounts...");
+    const accountsCursor = collection.aggregate([
+      { $group: { _id: "$compte" } }
+    ]);
+
+    let processedCount = 0;
+    for await (const doc of accountsCursor) {
+        const account = doc._id;
+        if (account) {
+            await fileUtils.downloadProfilePicture({account: account});
+            processedCount++;
+            if (processedCount % 100 === 0) {
+                console.log(`Processed ${processedCount} accounts...`);
+            }
+        }
     }
-    console.log("All profile pictures processed.");
+
+    console.log(`All profile pictures processed. Total accounts: ${processedCount}`);
   
-    const totalTweets = allTweets.length;
+    const totalTweets = await collection.countDocuments({});
     console.log(`Total number of tweets: ${totalTweets}`);
     const outputPath = path.join(__dirname, "total_tweets.txt");
     fs.writeFileSync(
       outputPath,
-      `Total Tweets: ${totalTweets}
-`
+      `Total Tweets: ${totalTweets}\n`
     );
     console.log(`Total tweets written to ${outputPath}`);
   } catch (error) {
