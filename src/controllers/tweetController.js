@@ -1,16 +1,23 @@
 const tweetService = require('../services/tweetService');
 const accountService = require('../services/accountService');
 const favoriteService = require('../services/favoriteService');
+const sseService = require('../services/sseService');
+const { enrichTweet } = require('../utils/mediaUtils');
+const Like = require('../models/Like');
 
 const tweetController = {
   async getTweets(req, res) {
+    // Si le client demande du streaming SSE
+    if (req.query.stream === 'true' || (req.headers.accept && req.headers.accept.includes('text/event-stream'))) {
+      return tweetController.streamTweets(req, res);
+    }
     try {
       const page = parseInt(req.query.page) || 1;
-      const userId = req.user ? req.user.id : null; // Assuming req.user is populated by authentication middleware
+      const userId = req.user ? req.user.id : req.session.userId;
       const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getPaginatedTweets(page, null, null, userId);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const favoriteAccounts = (await accountService.getAccounts()).favorites;
-      console.log(tweets)
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(userId);
+      // console.log(tweets)
       res.json({
         tweets,
         currentPage,
@@ -20,8 +27,63 @@ const tweetController = {
         favoriteAccounts
       });
     } catch (error) {
-      console.error('Error in getTweets:', error);
+      console.error('Error getting tweets:', error);
       res.status(500).json({ error: 'Error fetching tweets' });
+    }
+  },
+
+  /**
+   * Envoi des tweets en streaming Server-Sent Events (SSE)
+   */
+  async streamTweets(req, res) {
+    try {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Access-Control-Allow-Origin': '*'
+      });
+      if (typeof res.flushHeaders === 'function') {
+        res.flushHeaders();
+      }
+
+      const page = parseInt(req.query.page) || 1;
+      const searchQuery = req.query.query || req.query.search || '';
+      const userId = req.user ? req.user.id : (req.session ? req.session.userId : null);
+
+      let userLikes = [];
+      let userLikedAccounts = [];
+      if (userId) {
+        userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
+        userLikedAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
+
+      const { cursor, totalTweets, totalPages, currentPage } = await tweetService.getTweetsCursor(page, searchQuery);
+
+      // 1. Envoyer les métadonnées de pagination
+      res.write(`event: metadata\ndata: ${JSON.stringify({ totalTweets, totalPages, currentPage, searchQuery, timestamp: new Date().toISOString() })}\n\n`);
+      if (typeof res.flush === 'function') res.flush();
+
+      // 2. Envoyer chaque tweet un par un en streaming
+      let count = 0;
+      for await (const tweet of cursor) {
+        if (req.closed || res.writableEnded) break;
+        const enriched = enrichTweet(tweet, userLikes, userLikedAccounts);
+        res.write(`event: tweet\ndata: ${JSON.stringify(enriched)}\n\n`);
+        if (typeof res.flush === 'function') res.flush();
+        count++;
+      }
+
+      // 3. Envoyer la fin du flux
+      res.write(`event: end\ndata: ${JSON.stringify({ count, currentPage, totalPages, totalTweets })}\n\n`);
+      res.end();
+    } catch (error) {
+      console.error('Error streaming tweets via SSE:', error);
+      try {
+        res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+      } catch (_) {}
     }
   },
 
@@ -58,7 +120,7 @@ const tweetController = {
       const page = parseInt(req.query.page) || 1;
       
       const { tweets, currentPage, totalPages, totalTweets } = await tweetService.getTweetsByUsername(username, page);
-      console.log(tweets)
+      // console.log(tweets)
       res.json({ 
         tweets, 
         currentPage, 
@@ -181,6 +243,8 @@ const tweetController = {
   async createTweet(req, res) {
     try {
       const tweet = await tweetService.createTweet(req.body);
+      const enriched = enrichTweet(tweet, [], []);
+      sseService.notifyNewTweet(enriched);
       res.status(201).json(tweet);
     } catch (error) {
       console.error('Error in createTweet:', error);

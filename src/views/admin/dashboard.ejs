@@ -15,6 +15,92 @@
             <li><a href="/admin/tweets">Manage Hidden Tweets</a></li>
             <li><a href="/admin/users">Manage Users</a></li>
         </ul>
+
+        <div style="margin-top: 24px; padding: 18px; background: #192734; border: 1px solid #38444d; border-radius: 12px; color: #fff;">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                <span id="sse-live-dot" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#00ba7c; box-shadow:0 0 8px #00ba7c;"></span>
+                Monitoring Temps Réel (SSE)
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <div style="background: #15202b; padding: 12px; border-radius: 8px; border: 1px solid #273340;">
+                    <span style="font-size: 12px; color: #8899a6;">Base MongoDB</span>
+                    <div id="sse-mongo-status" style="font-weight: bold; margin-top: 4px; color: #00ba7c;">Connecté</div>
+                </div>
+                <div style="background: #15202b; padding: 12px; border-radius: 8px; border: 1px solid #273340;">
+                    <span style="font-size: 12px; color: #8899a6;">Mode CDN</span>
+                    <div id="sse-cdn-status" style="font-weight: bold; margin-top: 4px; color: #1d9bf0;">Inactif (Normal)</div>
+                </div>
+                <div style="background: #15202b; padding: 12px; border-radius: 8px; border: 1px solid #273340;">
+                    <span style="font-size: 12px; color: #8899a6;">Flux SSE</span>
+                    <div id="sse-stream-status" style="font-weight: bold; margin-top: 4px; color: #00ba7c;">Actif (Écoute en direct)</div>
+                </div>
+            </div>
+            
+            <h4 style="margin-bottom: 8px; font-size: 14px; color: #8899a6;">Journal des événements reçus par SSE</h4>
+            <div id="sse-events-log" style="background: #15202b; border: 1px solid #273340; border-radius: 8px; padding: 10px; height: 160px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                <div style="color: #8899a6;">[En attente d'événements...]</div>
+            </div>
+        </div>
+
+        <script>
+            (function() {
+                const logEl = document.getElementById('sse-events-log');
+                const mongoStatusEl = document.getElementById('sse-mongo-status');
+                const cdnStatusEl = document.getElementById('sse-cdn-status');
+                const dotEl = document.getElementById('sse-live-dot');
+
+                function appendLog(type, text) {
+                    const row = document.createElement('div');
+                    row.style.marginBottom = '4px';
+                    const time = new Date().toLocaleTimeString();
+                    row.innerHTML = '<span style="color:#8899a6;">[' + time + ']</span> <b style="color:#1d9bf0;">' + type + '</b> : ' + text;
+                    logEl.appendChild(row);
+                    logEl.scrollTop = logEl.scrollHeight;
+                }
+
+                if (window.EventSource) {
+                    const es = new EventSource('/api/events');
+                    es.addEventListener('connected', function(e) {
+                        const d = JSON.parse(e.data);
+                        appendLog('CONNECTED', 'Connexion SSE établie');
+                        if (d.cdnMode) {
+                            cdnStatusEl.textContent = 'ACTIF (Secours)';
+                            cdnStatusEl.style.color = '#f4212e';
+                        }
+                    });
+                    es.addEventListener('db-status', function(e) {
+                        const d = JSON.parse(e.data);
+                        appendLog('DB-STATUS', d.status);
+                        if (d.status === 'connected') {
+                            mongoStatusEl.textContent = 'Connecté';
+                            mongoStatusEl.style.color = '#00ba7c';
+                            dotEl.style.background = '#00ba7c';
+                            dotEl.style.boxShadow = '0 0 8px #00ba7c';
+                        } else if (d.status === 'reconnecting') {
+                            mongoStatusEl.textContent = 'Reconnexion en cours...';
+                            mongoStatusEl.style.color = '#ffd400';
+                            dotEl.style.background = '#ffd400';
+                            dotEl.style.boxShadow = '0 0 8px #ffd400';
+                        } else {
+                            mongoStatusEl.textContent = 'Déconnecté';
+                            mongoStatusEl.style.color = '#f4212e';
+                            dotEl.style.background = '#f4212e';
+                            dotEl.style.boxShadow = '0 0 8px #f4212e';
+                        }
+                    });
+                    es.addEventListener('cdn-mode', function(e) {
+                        const d = JSON.parse(e.data);
+                        appendLog('CDN-MODE', d.active ? 'Activé' : 'Désactivé');
+                        cdnStatusEl.textContent = d.active ? 'ACTIF (Secours)' : 'Inactif (Normal)';
+                        cdnStatusEl.style.color = d.active ? '#f4212e' : '#1d9bf0';
+                    });
+                    es.addEventListener('tweet-interaction', function(e) {
+                        const d = JSON.parse(e.data);
+                        appendLog('INTERACTION', d.type + ' ' + (d.tweetId || d.username || ''));
+                    });
+                }
+            })();
+        </script>
         <form action="/admin/logout" method="post">
             <button type="submit">Logout</button>
         </form>

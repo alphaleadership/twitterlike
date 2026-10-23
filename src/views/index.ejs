@@ -1,9 +1,19 @@
 <div class="container">
     <%- include('partials/sidebar', { sidebarAccounts: allAccounts, favoriteAccounts: favoriteAccounts }) %>
     <div class="main-content">
-        <h1>Flux des Tweets</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h1 style="margin: 0;">Flux des Tweets</h1>
+            <button id="btn-stream-sse" data-page="<%= currentPage %>" data-search="<%= searchQuery %>" title="Recharger les tweets en streaming direct via SSE" style="cursor: pointer; background: #1d9bf0; color: #fff; border: none; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
+                <span id="sse-btn-icon">⚡</span>
+                <span id="sse-btn-text">Streaming SSE</span>
+            </button>
+        </div>
 
-        <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn }) %>
+        <div id="new-tweets-banner" style="display: none; background: #1d9bf0; color: #fff; text-align: center; padding: 10px; border-radius: 12px; margin-bottom: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(29, 155, 240, 0.3);">
+            🔔 <span id="new-tweets-count">1</span> nouveau tweet reçu en direct via SSE. Cliquez pour afficher.
+        </div>
+
+        <%- include('partials/tweetList', { tweets: tweets, isLoggedIn: isLoggedIn, autoStream: true, currentPage: currentPage, searchQuery: searchQuery }) %>
         <%- include('partials/pagination', { currentPage: currentPage, totalPages: totalPages, baseUrl: '/', search: searchQuery }) %>
     </div>
 </div>

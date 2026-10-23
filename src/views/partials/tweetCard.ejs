@@ -1,12 +1,12 @@
-<div class="tweet-card">
+<div class="tweet-card" data-tweet-id="<%= tweet.id %>">
     <% if (tweet.isRetweet) { %>
         <div class="retweet-info">
             <p>🔁 Retweeted by <a href="/profile/<%= tweet.retweetedBy %>">@<%= tweet.retweetedBy %></a></p>
         </div>
     <% } %>
     <div class="tweet-header">
-        <img src="/public/images/profiles/<%= tweet.compte %>.png" alt="Profile Picture for <%= tweet.compte %>" class="profile-pic-tweet" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
-        <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> - <%= new Date(tweet.date).toLocaleDateString() %></p>
+        <img src="/public/images/profiles/<%= tweet.compte %>.png" alt="Profile Picture for <%= tweet.compte %>" class="profile-pic-tweet" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
+        <p><strong><a href="/profile/<%= tweet.compte %>"><%= tweet.compte %></a></strong> @<%= tweet.compte %> - <%= tweet.formattedDate || (tweet.date && !isNaN(new Date(tweet.date).getTime()) ? new Date(tweet.date).toLocaleDateString() : '') %></p>
     </div>
     <p><%- formatTweetText(tweet.texte) %></p>
     <% if (tweet.formattedQuote) { %>
@@ -24,7 +24,7 @@
         <div class="tweet-media">
             <% tweet.allMedia.forEach(media => { %>
                 <% if (media.type === 'photo') { %>
-                    <img src="<%= media.locallien %>" alt="Tweet Media">
+                    <img src="<%= media.locallien %>" loading="lazy" decoding="async" alt="Tweet Media">
                 <% } else if (media.type === 'video') { %>
                     <video controls src="<%= media.lien %>"></video>
                 <% } %>

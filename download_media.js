@@ -108,25 +108,69 @@ const getCookieHeaderForUrl = (targetUrl, cookiesByHost) => {
     }
 };
 
-const downloadMedia = (mediaItem, cookiesByHost) => {
+const resolveVideoUrlWithFxTwitter = (expandedUrl) => {
     return new Promise((resolve) => {
-        if (!mediaItem || !mediaItem.lien || !mediaItem.lien.startsWith('https')) {
-           // return resolve();
+        if (!expandedUrl) return resolve(null);
+        try {
+            const urlObj = new URL(expandedUrl);
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            const statusIndex = pathParts.indexOf('status');
+            if (statusIndex === -1 || !pathParts[statusIndex + 1]) {
+                console.error(`[Erreur Format URL] URL vidéo invalide : ${expandedUrl}`);
+                return resolve(null);
+            }
+
+            const user = pathParts[0];
+            const tweetId = pathParts[statusIndex + 1];
+            const apiUrl = `https://api.fxtwitter.com/status/${tweetId}`;
+
+            const options = {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json'
+                }
+            };
+
+            https.get(apiUrl, options, (res) => {
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => {
+                    if (res.statusCode !== 200) {
+                        console.error(`[Échec API FxTwitter HTTP ${res.statusCode}] ${apiUrl}`);
+                        return resolve(null);
+                    }
+                    try {
+                        const data = JSON.parse(body);
+                        if (data && data.code && data.code !== 200) {
+                            console.error(`[Échec API FxTwitter Code ${data.code}] ${data.message || 'Erreur API'}`);
+                            return resolve(null);
+                        }
+                        if (data && data.tweet && data.tweet.media && data.tweet.media.videos && data.tweet.media.videos.length > 0) {
+                            const video = data.tweet.media.videos[0];
+                            if (video.url) return resolve(video.url);
+                        }
+                        console.error(`[Échec MP4] Aucune vidéo/variant MP4 trouvée dans la réponse API pour ${apiUrl}`);
+                        resolve(null);
+                    } catch (e) {
+                        console.error(`[Erreur Parsing JSON API] ${apiUrl} : ${e.message}`);
+                        resolve(null);
+                    }
+                });
+            }).on('error', (err) => {
+                console.error(`[Erreur Réseau API] ${apiUrl} : ${err.message}`);
+                resolve(null);
+            });
+        } catch (e) {
+            console.error(`[Erreur Traitement MP4] ${expandedUrl} : ${e.message}`);
+            resolve(null);
         }
+    });
+};
 
-        const mediaUrl = mediaItem.media_object.media_url;
-        const fileName = path.basename(new URL(mediaUrl).pathname);
-        const localPath = path.join(MEDIA_DIR, fileName);
-
-        // Vérifier si le fichier existe déjà
-        if (fs.existsSync(localPath)) {
-            console.log(`File already exists: ${fileName}, skipping download`);
-            mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
-            return resolve();
-        }
-
+const downloadFileFromUrl = (targetUrl, localPath, cookiesByHost) => {
+    return new Promise((resolve) => {
         const fileStream = fs.createWriteStream(localPath);
-        const cookieHeader = getCookieHeaderForUrl(mediaUrl, cookiesByHost);
+        const cookieHeader = getCookieHeaderForUrl(targetUrl, cookiesByHost);
 
         const options = {
             headers: {
@@ -135,42 +179,94 @@ const downloadMedia = (mediaItem, cookiesByHost) => {
             }
         };
 
-        https.get(mediaUrl, options, (response) => {
-            // Handle redirects
+        https.get(targetUrl, options, (response) => {
             if (response.statusCode > 300 && response.statusCode < 400 && response.headers.location) {
-                console.log(`Redirecting from ${mediaUrl} to ${response.headers.location}`);
-                mediaItem.lien = response.headers.location;
-                downloadMedia(mediaItem, cookiesByHost).then(resolve);
+                downloadFileFromUrl(response.headers.location, localPath, cookiesByHost).then(resolve);
                 return;
             }
 
             if (response.statusCode !== 200) {
-                if(response.statusCode !== 404){
-                    console.error(`Failed to download ${mediaUrl}: Status Code ${response.statusCode}`);
-                }
-                
-                fs.unlink(localPath, () => {}); // Clean up the empty file
-                return resolve(); // Don't reject, just move on
+                console.error(`[Échec HTTP ${response.statusCode}] Impossible de télécharger depuis ${targetUrl}`);
+                fs.unlink(localPath, () => {});
+                return resolve(false);
             }
 
             response.pipe(fileStream);
-
             fileStream.on('finish', () => {
-                fileStream.close(() => {
-                    mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
-                    console.log(`Downloaded and updated to ${mediaItem.lien}`);
-                    resolve();
-                });
+                fileStream.close(() => resolve(true));
             });
-
         }).on('error', (err) => {
-            console.error(`Error downloading media ${mediaUrl}:`, err.message);
-            fs.unlink(localPath, () => {}); // Clean up
-            resolve(); // Don't reject, just move on
+            console.error(`[Erreur réseau/téléchargement] ${targetUrl} : ${err.message}`);
+            fs.unlink(localPath, () => {});
+            resolve(false);
         });
     });
 };
 
+const downloadMedia = async (mediaItem, cookiesByHost) => {
+    if (!mediaItem || !mediaItem.media_object) return;
+
+    const isVideo = mediaItem.type === 'video' || mediaItem.type === 'animated_gif' || mediaItem.media_object.type === 'video' || mediaItem.media_object.type === 'animated_gif';
+    
+    // Déterminer le nom de fichier cible local (.mp4 pour les vidéos/GIFs, sinon extension originale)
+    let fileName = mediaItem.file;
+    if (!fileName && mediaItem.media_object.media_url) {
+        fileName = path.basename(new URL(mediaItem.media_object.media_url).pathname);
+    }
+    if (isVideo && fileName && !fileName.endsWith('.mp4')) {
+        fileName = fileName.replace(/\.[^/.]+$/, '') + '.mp4';
+    }
+    if (!fileName) return;
+
+    const localPath = path.join(MEDIA_DIR, fileName);
+
+    // Vérification : Ne pas télécharger si la vidéo ou le fichier existe déjà
+    if (fs.existsSync(localPath)) {
+        //console.log(`File already exists: ${fileName}, skipping download`);
+        mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
+        return;
+    }
+
+    // Traitement 1 : Téléchargement Vidéo / GIF
+    if (isVideo) {
+        const expandedUrl = mediaItem.media_object.expanded_url;
+        console.log(`Résolution vidéo pour ${fileName} via FxTwitter API...`);
+        const videoMp4Url = await resolveVideoUrlWithFxTwitter(expandedUrl);
+
+        if (videoMp4Url) {
+            console.log(`Téléchargement de la vidéo MP4 : ${videoMp4Url}`);
+            const success = await downloadFileFromUrl(videoMp4Url, localPath, cookiesByHost);
+            if (success) {
+                mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${fileName}`;
+                console.log(`Vidéo téléchargée avec succès : ${fileName}`);
+                return;
+            }
+        }
+
+        // Tente de secourir en fallback avec l'URL media_url miniature si le téléchargement vidéo échoue
+        console.warn(`[Échec MP4] Impossible de résoudre la vidéo pour ${fileName}, fallback image miniature...`);
+    }
+
+    // Traitement 2 : Téléchargement Image standard / Fallback
+    const mediaUrl = mediaItem.media_object.media_url;
+    if (!mediaUrl) return;
+
+    const imgFileName = path.basename(new URL(mediaUrl).pathname);
+    const imgLocalPath = path.join(MEDIA_DIR, imgFileName);
+
+    // Vérifier si l'image existe déjà avant téléchargement
+    if (fs.existsSync(imgLocalPath)) {
+       // console.log(`Image already exists: ${imgFileName}, skipping download`);
+        mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${imgFileName}`;
+        return;
+    }
+
+    const success = await downloadFileFromUrl(mediaUrl, imgLocalPath, cookiesByHost);
+    if (success) {
+        mediaItem.locallien = `http://localhost:3002/public/images/tweet_media/${imgFileName}`;
+        console.log(`Downloaded image to ${mediaItem.locallien}`);
+    }
+};
 
 const processTweets = async () => {
     console.log('Starting tweet processing...');
@@ -226,4 +322,5 @@ const processTweets = async () => {
 };
 
 processTweets();
+
 

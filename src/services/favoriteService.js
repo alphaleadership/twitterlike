@@ -1,37 +1,47 @@
-const { getFavorites, updateFavorites } = require('../utils/fileUtils');
+const Like = require('../models/Like');
 
 class FavoriteService {
-  async getFavorites() {
+  async getFavorites(userId) {
     try {
-      return getFavorites();
+      if (!userId) return [];
+      return await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
     } catch (error) {
       console.error('Error getting favorites:', error);
       throw error;
     }
   }
 
-  async addFavorite(tweetId) {
+  async addFavorite(userId, tweetId) {
     try {
-      return await updateFavorites(tweetId, 'add');
+      if (!userId) throw new Error('User ID is required');
+      await Like.findOneAndUpdate(
+        { userId, tweetId },
+        { $set: { userId, tweetId } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      return true;
     } catch (error) {
       console.error(`Error adding favorite ${tweetId}:`, error);
       throw error;
     }
   }
 
-  async removeFavorite(tweetId) {
+  async removeFavorite(userId, tweetId) {
     try {
-      return await updateFavorites(tweetId, 'remove');
+      if (!userId) throw new Error('User ID is required');
+      await Like.deleteOne({ userId, tweetId });
+      return true;
     } catch (error) {
       console.error(`Error removing favorite ${tweetId}:`, error);
       throw error;
     }
   }
 
-  async isFavorite(tweetId) {
+  async isFavorite(userId, tweetId) {
     try {
-      const favorites = await this.getFavorites();
-      return favorites.includes(tweetId);
+      if (!userId) return false;
+      const favorite = await Like.findOne({ userId, tweetId });
+      return !!favorite;
     } catch (error) {
       console.error(`Error checking if ${tweetId} is favorite:`, error);
       throw error;

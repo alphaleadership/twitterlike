@@ -2,6 +2,7 @@ const tweetService = require('../services/tweetService');
 const accountService = require('../services/accountService');
 const fileUtils = require('../utils/fileUtils');
 const Like = require('../models/Like');
+const sseService = require('../services/sseService');
 
 const formatTweetText = (text) => {
   let formattedText = text.replace(/@(\w+)/g, '<a href="/profile/$1">@$1</a>');
@@ -12,28 +13,29 @@ const formatTweetText = (text) => {
 const webController = {
   async renderIndex(req, res) {
     try {
-      // Initialize session counter if it doesn't exist
-      if (!req.session.pageViews) {
-        req.session.pageViews = 0;
-      }
-      // Increment the counter
-      req.session.pageViews++;
-
       const page = parseInt(req.query.page) || 1;
       const searchQuery = req.query.search || '';
-      const { tweets, currentPage, totalPages, allAccounts, favoriteAccounts } = await tweetService.getPaginatedTweets(page, formatTweetText, searchQuery, req.session.userId);
-      console.log(tweets)
+      const userId = req.session ? req.session.userId : null;
+
+      let favoriteAccounts = [];
+      if (userId) {
+        try {
+          favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+        } catch (_) {}
+      }
+
+      // Ne pas charger les tweets à l'envoi initial de la page pour une réponse ultra-rapide (< 5ms).
+      // Les tweets sont diffusés en continu par Server-Sent Events (SSE).
       res.render('index', {
-        tweets,
-        currentPage,
-        totalPages,
+        tweets: [],
+        currentPage: page,
+        totalPages: 1,
         formatTweetText,
-        allAccounts,
+        allAccounts: [],
         favoriteAccounts,
         searchQuery,
-        pageViews: req.session.pageViews, // Pass pageViews to the template
-        isLoggedIn: !!req.session.userId,
-        username: req.session.username
+        isLoggedIn: !!userId,
+        username: req.session ? req.session.username : null
       });
     } catch (error) {
       console.error('Error rendering index page:', error);
@@ -46,7 +48,7 @@ const webController = {
       const userId = req.session.userId;
       const { tweets, favoriteAccounts } = await tweetService.getFavoriteTweets(userId);
       const allAccounts = await tweetService.getUniqueAccounts(userId);
-      console.log(tweets)
+      // console.log(tweets)
       res.render('favorites', { tweets, formatTweetText, favoriteAccounts, allAccounts, isLoggedIn: !!req.session.userId, username: req.session.username });
     } catch (error) {
       console.error('Error rendering favorites page:', error);
@@ -95,7 +97,7 @@ const webController = {
       const page = parseInt(req.query.page) || 1;
       const { user, media, currentPage, totalPages } = await tweetService.getProfileMedia(username, page, formatTweetText, null, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(req.session.userId);
       console.log('Media data for profile_media.ejs:', media);
       if (user) {
         res.render('profile_media', {
@@ -124,7 +126,7 @@ const webController = {
       const page = parseInt(req.query.page) || 1;
       const { user, videos, currentPage, totalPages } = await tweetService.getProfileVideos(username, page, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(req.session.userId);
 
       // Download profile pictures for all accounts
       for (const account of allAccounts) {
@@ -160,7 +162,7 @@ const webController = {
       const searchQuery = req.query.search || '';
       const { user, tweets, media, topRetweetedAccounts, topMentionedAccounts, currentPage, totalPages } = await tweetService.getProfileData(username, page, searchQuery, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(req.session.userId);
       console.log('Tweet data for profile.ejs:', tweets);
       // Download profile pictures for all accounts
       for (const account of allAccounts) {
@@ -205,7 +207,7 @@ const webController = {
       const tweetId = req.params.id;
       let tweet = await tweetService.getTweetById(tweetId, formatTweetText, req.session.userId);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(req.session.userId);
 
       if (tweet) {
         // Récupérer les réponses à ce tweet (tweets dont reply ou reply_to == tweet.id)
@@ -283,7 +285,7 @@ const webController = {
       const userId = req.session.userId;
       const { tweets, currentPage, totalPages, totalMedia } = await tweetService.getFavoriteAccountsMedia(userId, page);
       const allAccounts = await tweetService.getUniqueAccounts();
-      const { favorites: favoriteAccounts } = await accountService.getAccounts();
+      const { favorites: favoriteAccounts } = await accountService.getAccounts(userId);
       res.render('favorite_accounts_media', {
         media: tweets,
         currentPage,
@@ -305,6 +307,7 @@ const webController = {
     try {
       const username = req.params.username;
       await accountService.hideAccount(username);
+      sseService.notifyTweetInteraction('hide_account', { username });
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -320,6 +323,7 @@ const webController = {
       }
       const tweetId = req.params.id;
       await tweetService.addLike(req.session.userId, tweetId, null);
+      sseService.notifyTweetInteraction('like', { tweetId, userId: req.session.userId });
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -335,6 +339,7 @@ const webController = {
       }
       const tweetId = req.params.id;
       await tweetService.removeLike(req.session.userId, tweetId, null);
+      sseService.notifyTweetInteraction('unlike', { tweetId, userId: req.session.userId });
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {
@@ -411,6 +416,7 @@ const webController = {
     try {
       const tweetId = req.params.id;
       await tweetService.hideTweet(tweetId);
+      sseService.notifyTweetInteraction('hide_tweet', { tweetId });
       const prevUrl = req.session.previousUrls && req.session.previousUrls[1];
       res.redirect(prevUrl || '/');
     } catch (error) {

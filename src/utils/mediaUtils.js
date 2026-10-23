@@ -1,3 +1,5 @@
+const { resolveTweetDate, formatTweetDate } = require('./dateUtils');
+
 const videofilter = (tweet) => {
   let all = {};
   if (!tweet.video) return [];
@@ -44,6 +46,20 @@ const enrichTweet = (tweet, userLikes, userLikedAccounts, formatTextFunction, tw
   tweet.allMedia = allMedia;
   tweet.isLiked = userLikes.includes(tweet.id);
   tweet.isAccountLiked = userLikedAccounts.includes(tweet.compte);
+
+  const formatFn = formatTextFunction || ((text) => {
+    if (!text) return '';
+    return text
+      .replace(/@(\w+)/g, '<a href="/profile/$1">@$1</a>')
+      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+  });
+  tweet.formattedText = formatFn(tweet.texte || '');
+
+  // Patch automatique de la date si manquante ou invalide
+  if (!tweet.date || tweet.date === 'Invalid Date' || isNaN(new Date(tweet.date).getTime())) {
+    tweet.date = resolveTweetDate(tweet).toISOString();
+  }
+  tweet.formattedDate = formatTweetDate(tweet.date, tweet.id);
 
   // Format quote if it exists
   if (tweet.quote) {

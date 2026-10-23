@@ -1,10 +1,15 @@
-const { getHiddenAccounts, getFavoriteAccounts, updateHiddenAccounts, updateFavoriteAccounts } = require('../utils/fileUtils');
+const { getHiddenAccounts, updateHiddenAccounts } = require('../utils/fileUtils');
+const Like = require('../models/Like');
 
 class AccountService {
-  async getAccounts() {
+  async getAccounts(userId = null) {
     try {
       const hiddenAccounts = getHiddenAccounts();
-      const favoriteAccounts = getFavoriteAccounts();
+      let favoriteAccounts = [];
+      
+      if (userId) {
+        favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
+      }
       
       return {
         hidden: hiddenAccounts,
@@ -34,18 +39,26 @@ class AccountService {
     }
   }
 
-  async addFavoriteAccount(username) {
+  async addFavoriteAccount(userId, username) {
     try {
-      return await updateFavoriteAccounts(username, 'add');
+      if (!userId) throw new Error('User ID is required to add favorite account');
+      await Like.findOneAndUpdate(
+        { userId, accountUsername: username },
+        { $set: { userId, accountUsername: username } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      return true;
     } catch (error) {
       console.error(`Error adding favorite account ${username}:`, error);
       throw error;
     }
   }
 
-  async removeFavoriteAccount(username) {
+  async removeFavoriteAccount(userId, username) {
     try {
-      return await updateFavoriteAccounts(username, 'remove');
+      if (!userId) throw new Error('User ID is required to remove favorite account');
+      await Like.deleteOne({ userId, accountUsername: username });
+      return true;
     } catch (error) {
       console.error(`Error removing favorite account ${username}:`, error);
       throw error;

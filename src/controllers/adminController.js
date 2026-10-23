@@ -3,6 +3,7 @@ const accountService = require('../services/accountService');
 const fileUtils = require('../utils/fileUtils');
 const Admin = require('../models/Admin');
 const User = require('../models/User'); // Import User model
+const sseService = require('../services/sseService');
 
 const adminController = {
     renderLogin(req, res) {
@@ -10,9 +11,18 @@ const adminController = {
     },
 
     async login(req, res) {
-        const { username, password } = req.body;
+        let { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.redirect('/admin/login?error=Username and password are required');
+        }
+
+        username = username.trim();
+        
         try {
-            const admin = await Admin.findOne({ username });
+            // Find admin case-insensitively if needed, but here we'll stick to exact match first with trim
+            const admin = await Admin.findOne({ username: username });
+            
             if (!admin) {
                 return res.redirect('/admin/login?error=Invalid credentials');
             }
@@ -23,7 +33,14 @@ const adminController = {
             }
 
             req.session.isAdmin = true;
-            res.redirect('/admin');
+            // Explicitly save session before redirecting to ensure it's persisted
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).send('Error saving session');
+                }
+                res.redirect('/admin');
+            });
         } catch (error) {
             console.error('Error during admin login:', error);
             res.status(500).send('Server error during login');
@@ -59,6 +76,7 @@ const adminController = {
         try {
             const username = req.params.username;
             fileUtils.updateHiddenAccounts(username, 'remove');
+            sseService.notifyTweetInteraction('unhide_account', { username });
             res.redirect('/admin/accounts');
         } catch (error) {
             console.error('Error unhiding account:', error);
@@ -70,6 +88,7 @@ const adminController = {
         try {
             const username = req.params.username;
             fileUtils.updateHiddenAccounts(username, 'add');
+            sseService.notifyTweetInteraction('hide_account', { username });
             res.redirect('/admin/accounts');
         } catch (error) {
             console.error('Error hiding account:', error);
@@ -91,6 +110,7 @@ const adminController = {
         try {
             const tweetId = req.params.id;
             fileUtils.updateHiddenTweets(tweetId, 'remove');
+            sseService.notifyTweetInteraction('unhide_tweet', { tweetId });
             res.redirect('/admin/tweets');
         } catch (error) {
             console.error('Error unhiding tweet:', error);

@@ -27,7 +27,7 @@
         }).forEach(item => { %>
             <li>
                 <div class="account-info">
-                    <img src="/public/images/profiles/<%= item.account %>.png" alt="NF" class="profile-pic" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
+                    <img src="/public/images/profiles/<%= item.account %>.png" alt="NF" class="profile-pic" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/public/images/default_profile.png';">
                     <a href="/profile/<%= item.account %>"><%= item.account %> (<%= item.count %>)</a>
                 </div>
                 <% if (isLoggedIn) { %>

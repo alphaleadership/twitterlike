@@ -12,6 +12,8 @@ tweets_with_local_media.json
 dumps
 new_users.csv
 tweets_no_date.json
+tweets_no_dates.json
+*.bak
 
 sessions/*
 temp.js

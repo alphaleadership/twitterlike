@@ -6,6 +6,11 @@
  * @param {Function} next - Next middleware function
  */
 const errorHandler = (err, req, res, next) => {
+  // Silent 503 when DB is not available
+  if (err.message === 'Database not connected. Call connectToMongo first.') {
+    return res.status(503).json({ success: false, error: { status: 503, message: 'Service temporarily unavailable' } });
+  }
+
   console.error('API Error:', err);
   
   // Default error status and message

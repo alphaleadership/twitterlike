@@ -127,16 +127,16 @@ const downloadProfilePicture = async (username) => {
   try {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     if (response.status !== 200) {
-  //    console.warn(`Could not download profile picture for ${username.account}:`);
+      console.warn(`Could not download profile picture for ${username.account}:`);
       return false;
     }
     fs.writeFileSync(imagePath, response.data);
-   // console.log(`Downloaded profile picture for ${username.account}`);
+    console.log(`Downloaded profile picture for ${username.account}`);
     return true;
-  } catch (error) {
-   // console.error(`Error downloading profile picture for ${username.account}:`);
+    } catch (error) {
+    console.error(`Error downloading profile picture for ${username.account}:`, error.message);
     return false;
-  }
+    }
 };
 
 module.exports = {

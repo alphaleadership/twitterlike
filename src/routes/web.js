@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const webController = require('../controllers/webController');
+const sseController = require('../controllers/sseController');
+
+// Real-time SSE endpoint
+router.get('/events', sseController.handleEvents);
 
 router.get('/', webController.renderIndex);
 router.get('/favorites', webController.renderFavorites);

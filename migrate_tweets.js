@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const fs = require('fs');
 const { parser } = require('stream-json');
 const { streamArray } = require('stream-json/streamers/StreamArray');
@@ -7,10 +7,22 @@ require("dotenv").config();
 
 async function migrateTweets() {
   const uri = process.env.MONGO_URI;
-  const client = new MongoClient(uri);
-
+  console.log(ServerApiVersion);
+  const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: false,
+    deprecationErrors: false,
+  },family: 4
+});
+console.log('Connecting to MongoDB...');
   try {
-    await client.connect();
+    await client.connect().catch(err => {
+        console.error('Connection error:', err);
+        
+    });
+    console.log('Connected to MongoDB.');
+    await client.db("admin").command({ ping: 1 });
     const database = client.db('twitter_db');
     const tweetsCollection = database.collection('tweets');
 
@@ -31,7 +43,7 @@ async function migrateTweets() {
     ]);
 
     let buffer = [];
-    const BATCH_SIZE = 1000;
+    const BATCH_SIZE = 100;
     let count = 0;
 
     console.log('Starting migration...');

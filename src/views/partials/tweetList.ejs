@@ -1,3 +1,19 @@
-<% tweets.forEach(tweet => { %>
-    <%- include('tweetCard', { tweet: tweet, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
-<%})%>
+<div id="tweet-list-container"
+     <% if (locals.autoStream) { %>
+     data-auto-stream="true"
+     data-page="<%= locals.currentPage || 1 %>"
+     data-search="<%= locals.searchQuery || '' %>"
+     data-logged-in="<%= locals.isLoggedIn ? 'true' : 'false' %>"
+     <% } %>>
+<% if (locals.autoStream && (!tweets || tweets.length === 0)) { %>
+    <div id="sse-stream-indicator" style="padding: 24px; text-align: center; color: #8899a6; font-size: 14px; background: #192734; border-radius: 12px; margin-bottom: 16px; border: 1px dashed #38444d;">
+        <div style="font-size: 18px; margin-bottom: 8px; font-weight: 600; color: #1d9bf0;">⚡ Chargement des tweets en streaming SSE...</div>
+        <div id="sse-stream-counter">Connexion au serveur en direct...</div>
+    </div>
+<% } %>
+<% if (tweets && tweets.length > 0) { %>
+    <% tweets.forEach(tweet => { %>
+        <%- include('tweetCard', { tweet: tweet, formatTweetText: formatTweetText, isLoggedIn: isLoggedIn }) %>
+    <% }) %>
+<% } %>
+</div>

@@ -3,8 +3,14 @@ const router = express.Router();
 const tweetController = require('../controllers/tweetController');
 const accountController = require('../controllers/accountController');
 const favoriteController = require('../controllers/favoriteController');
+const sseController = require('../controllers/sseController');
+
+// Real-time Server-Sent Events (SSE) routes
+router.get('/events', sseController.handleEvents);
+router.get('/events/status', sseController.getStatus);
 
 // Tweet routes
+router.get('/tweets/stream', tweetController.streamTweets);
 router.get('/tweets', tweetController.getTweets);
 router.post('/tweets', tweetController.createTweet);
 router.get('/search', tweetController.searchTweets);

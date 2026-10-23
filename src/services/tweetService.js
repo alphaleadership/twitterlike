@@ -9,7 +9,23 @@ class TweetService {
     this.tweetsPerPage = 10;
     this.mediaPerPage = 14;
     this.videosPerPage = 14;
+    this._cachedTotalTweets = null;
+    this._cachedTotalTweetsTime = 0;
   }
+
+  async getTotalTweetsCount(collection, query, searchQuery = '') {
+    const now = Date.now();
+    if (!searchQuery && this._cachedTotalTweets && (now - this._cachedTotalTweetsTime < 120000)) {
+      return this._cachedTotalTweets;
+    }
+    const count = await collection.countDocuments(query);
+    if (!searchQuery) {
+      this._cachedTotalTweets = count;
+      this._cachedTotalTweetsTime = now;
+    }
+    return count;
+  }
+
 
   async getCollection() {
     const db = getDb();
@@ -19,7 +35,7 @@ class TweetService {
   async getAllTweets(filterHidden = true, userId = null) {
     try {
       const collection = await this.getCollection();
-      let tweets = await collection.find({}).toArray();
+      let tweets = await collection.find({}).sort({ date: -1 }).toArray();
 
       // Masquer les réponses du flux principal (uniquement côté back)
       tweets = tweets.filter(tweet => !tweet.reply && !tweet.reply_to);
@@ -95,7 +111,7 @@ class TweetService {
                   });
                   query.$and = [...(query.$and || []), ...searchQueries];
                 }
-              }      const totalTweets = await collection.countDocuments(query);
+              }      const totalTweets = await this.getTotalTweetsCount(collection, query, searchQuery);
       const totalPages = Math.ceil(totalTweets / pageSize);
       const skip = (page - 1) * pageSize;
 
@@ -231,7 +247,7 @@ class TweetService {
         }
       }
 
-      const totalTweets = await collection.countDocuments(query);
+      const totalTweets = await this.getTotalTweetsCount(collection, query, searchQuery);
       const totalPages = Math.ceil(totalTweets / this.tweetsPerPage);
       const skip = (page - 1) * this.tweetsPerPage;
 
@@ -262,6 +278,54 @@ class TweetService {
       };
     } catch (error) {
       console.error('Error getting paginated tweets:', error);
+      throw error;
+    }
+  }
+
+  async getTweetsCursor(page = 1, searchQuery = '', pageSize = this.tweetsPerPage) {
+    try {
+      const collection = await this.getCollection();
+      const hiddenAccounts = getHiddenAccounts();
+      const hiddenTweets = getHiddenTweets();
+
+      const query = {
+        reply: { $ne: true },
+        reply_to: { $ne: true },
+        compte: { $nin: hiddenAccounts },
+        id: { $nin: hiddenTweets }
+      };
+
+      if (searchQuery) {
+        const words = searchQuery.trim().split(/\s+/).filter(word => word.length > 0);
+        if (words.length > 0) {
+          const searchQueries = words.map(word => {
+            const searchRegex = new RegExp(word, 'i');
+            return {
+              $or: [
+                { compte: { $regex: searchRegex } },
+                { texte: { $regex: searchRegex } },
+                { 'hashtags.text': { $regex: searchRegex } },
+                { 'retweeted_status.texte': { $regex: searchRegex } },
+                { 'retweeted_status.compte': { $regex: searchRegex } }
+              ]
+            };
+          });
+          query.$and = [...(query.$and || []), ...searchQueries];
+        }
+      }
+
+      const totalTweets = await collection.countDocuments(query);
+      const totalPages = Math.ceil(totalTweets / pageSize);
+      const skip = (page - 1) * pageSize;
+
+      const cursor = collection.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(pageSize);
+
+      return { cursor, totalTweets, totalPages, currentPage: page };
+    } catch (error) {
+      console.error('Error getting tweets cursor:', error);
       throw error;
     }
   }
@@ -392,6 +456,11 @@ class TweetService {
       const allTweets = await this.getAllTweets(false, userId); // Do not filter hidden accounts here
       const userLikes = await Like.find({ userId, tweetId: { $exists: true } }).distinct('tweetId');
       const favoriteTweets = allTweets.filter(tweet => userLikes.includes(tweet.id));
+      favoriteTweets.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
       const favoriteAccounts = await Like.find({ userId, accountUsername: { $exists: true } }).distinct('accountUsername');
       return { tweets: favoriteTweets, favoriteAccounts: favoriteAccounts };
     } catch (error) {
